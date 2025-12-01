@@ -10,7 +10,6 @@ class PlatformUtil:
             os.path.dirname(__file__),
             "..",
             "..",
-            "..",
             "configs",
             "platform_config.json",
         )
