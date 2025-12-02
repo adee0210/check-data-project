@@ -15,15 +15,21 @@ sys.path.insert(0, str(project_root))
 
 
 from check.check_api import CheckAPI
+from check.check_database import CheckDatabase
 
 
 import asyncio
 
 
 async def main():
-    test = CheckAPI()
+    # Chạy API checks
+    api_checker = CheckAPI()
 
-    await test.run_api_tasks()
+    # Chạy Database checks
+    db_checker = CheckDatabase()
+
+    # Chạy song song cả API và Database checks
+    await asyncio.gather(api_checker.run_api_tasks(), db_checker.run_database_tasks())
 
 
 asyncio.run(main())
