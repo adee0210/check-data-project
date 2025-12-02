@@ -11,7 +11,7 @@ class PlatformUtil:
             "..",
             "..",
             "configs",
-            "platform_config.json",
+            "config.json",
         )
         with open(self.config_path, "r", encoding="utf-8") as f:
             self.config = json.load(f)

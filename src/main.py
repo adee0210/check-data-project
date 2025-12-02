@@ -1,8 +1,6 @@
 import sys
 from pathlib import Path
 
-from utils.platform_util import PlatformUtil
-
 
 def find_project_root(current_file, marker="requirements.txt"):
     current_path = Path(current_file).resolve()
@@ -14,3 +12,19 @@ def find_project_root(current_file, marker="requirements.txt"):
 
 project_root = find_project_root(__file__, marker="requirements.txt")
 sys.path.insert(0, str(project_root))
+
+
+from check_logic.check_api import CheckAPI
+
+
+import asyncio
+
+
+async def main():
+    test = CheckAPI()
+
+    # Chạy tasks liên tục
+    await test.run_tasks()
+
+
+asyncio.run(main())
