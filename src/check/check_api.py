@@ -9,8 +9,7 @@ from logic_check.data_validator import DataValidator
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
 from configs.config import API_CONFIG, PLATFORM_CONFIG
-
-# from utils.platform_util import PlatformUtil
+from utils.platform_util import PlatformUtil
 
 
 class CheckAPI:
@@ -19,8 +18,10 @@ class CheckAPI:
         self.task_manager_api = TaskManager()
         self.config_api = API_CONFIG
         self.config_platform = PLATFORM_CONFIG
+        self.platform_util = PlatformUtil()
 
-        # self.platform_util = PlatformUtil()
+        # Tracking alert frequency: {display_name: last_alert_time}
+        self.last_alert_times = {}
 
     async def check_data_api(self, api_name, api_config, symbol=None):
         """Hàm logic check data cho API chạy liên tục"""
@@ -29,6 +30,7 @@ class CheckAPI:
         column_to_check = api_config.get("column_to_check")
         timezone_offset = api_config.get("timezone_offset", 7)  # Mặc định GMT+7
         allow_delay = api_config.get("allow_delay")
+        alert_frequency = api_config.get("alert_frequency", 60)  # Mặc định 60 giây
         check_frequency = api_config.get("check_frequency")
         valid_time = api_config.get("valid_time", {})
 
@@ -78,11 +80,41 @@ class CheckAPI:
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
                 )
+                # Luôn ghi log
                 self.logger_api.warning(
                     f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
                 )
+
+                # Kiểm tra alert_frequency trước khi gửi lên platform
+                current_time = datetime.now()
+                last_alert = self.last_alert_times.get(display_name)
+
+                should_send_alert = False
+                if last_alert is None:
+                    # Lần đầu tiên lỗi → gửi ngay
+                    should_send_alert = True
+                else:
+                    # Kiểm tra đã qua alert_frequency chưa
+                    time_since_last_alert = (current_time - last_alert).total_seconds()
+                    if time_since_last_alert >= alert_frequency:
+                        should_send_alert = True
+
+                if should_send_alert:
+                    # Gửi cảnh báo lên platform
+                    self.platform_util.send_alert_message(
+                        api_name=api_name,
+                        symbol=symbol,
+                        overdue_seconds=overdue_seconds,
+                        allow_delay=allow_delay,
+                        alert_level="warning",
+                    )
+                    # Cập nhật thời gian alert cuối
+                    self.last_alert_times[display_name] = current_time
             else:
                 self.logger_api.info(f"Đã nhận dữ liệu mới cho {display_name}")
+                # Reset alert tracking khi data fresh trở lại
+                if display_name in self.last_alert_times:
+                    del self.last_alert_times[display_name]
 
             self.logger_api.info(f"Kiểm tra dữ liệu cho {display_name} tại {uri}")
 
