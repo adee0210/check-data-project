@@ -23,7 +23,6 @@ import asyncio
 async def main():
     test = CheckAPI()
 
-    # Chạy tasks liên tục
     await test.run_tasks()
 
 
