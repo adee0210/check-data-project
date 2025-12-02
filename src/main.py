@@ -14,7 +14,7 @@ project_root = find_project_root(__file__, marker="requirements.txt")
 sys.path.insert(0, str(project_root))
 
 
-from check_logic.check_api import CheckAPI
+from check.check_api import CheckAPI
 
 
 import asyncio
@@ -23,7 +23,7 @@ import asyncio
 async def main():
     test = CheckAPI()
 
-    await test.run_tasks()
+    await test.run_api_tasks()
 
 
 asyncio.run(main())
