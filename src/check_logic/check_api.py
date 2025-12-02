@@ -1,6 +1,4 @@
 from datetime import datetime, timedelta
-import os
-import json
 import asyncio
 
 import requests
