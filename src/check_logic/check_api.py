@@ -28,7 +28,7 @@ class CheckAPI:
         record_pointer = api_config.get("record_pointer")
         column_to_check = api_config.get("column_to_check")
         allow_delay = api_config.get("allow_delay")
-        check_frequency = api_config.get("check_frequency", 5)
+        check_frequency = api_config.get("check_frequency")
         alert_frequency = api_config.get("alert_frequency")
         valid_time = api_config.get("valid_time")
         while True:
