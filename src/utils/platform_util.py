@@ -20,7 +20,10 @@ class PlatformUtil:
         symbol,
         overdue_seconds,
         allow_delay,
+        check_frequency,
+        alert_frequency,
         alert_level="warning",
+        error_message="Không có dữ liệu mới",
     ):
         """Gửi cảnh báo lên platform khi data quá hạn"""
         platform, settings = self.primary_platform, self.primary_settings
@@ -31,14 +34,28 @@ class PlatformUtil:
         # Tạo display name
         display_name = f"{api_name}-{symbol}" if symbol else api_name
 
+        # Tạo display name
+        display_name = f"{api_name}-{symbol}" if symbol else api_name
+
         # Format thời gian
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Tính thời gian gửi message tiếp theo
+        next_time = datetime.datetime.now() + datetime.timedelta(
+            seconds=alert_frequency
+        )
+        next_time_str = next_time.strftime("%Y-%m-%d %H:%M:%S")
 
         # Tính tổng thời gian data cũ
         total_seconds = overdue_seconds + allow_delay
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         secs = total_seconds % 60
+
+        # Tính ngưỡng cho phép
+        allow_hours = allow_delay // 3600
+        allow_minutes = (allow_delay % 3600) // 60
+        allow_secs = allow_delay % 60
 
         # Map alert_level to alert_type
         if alert_level == "warning":
@@ -55,21 +72,33 @@ class PlatformUtil:
             color = 0xFFA500
 
         # Format message
+        symbol_line = f"Symbol: {symbol}\n" if symbol else ""
         message = (
-            f"{emoji} {display_name.upper()} - {alert_type}\n"
+            f"{emoji} {api_name.upper()} - {alert_type}\n"
             f"Thời gian: {current_time}\n"
-            f"Dữ liệu cũ: {hours} giờ {minutes} phút {secs} giây"
+            f"{symbol_line}"
+            f"Nội dung: {error_message}\n"
+            f"Dữ liệu cũ: {hours} giờ {minutes} phút {secs} giây\n"
+            f"Ngưỡng cho phép: {allow_hours} giờ {allow_minutes} phút {allow_secs} giây\n"
+            f"Tần suất kiểm tra: {check_frequency} giây\n"
+            f"Thời gian gửi message tiếp theo (nếu còn lỗi): {next_time_str}"
         )
 
         # Gửi tin nhắn dựa trên platform
         if platform == "discord":
             webhook_url = settings.get("webhooks_url")
             if webhook_url:
+                symbol_field = f"**Symbol:** {symbol}\n" if symbol else ""
                 embed = {
-                    "title": f"{emoji} {display_name.upper()} - {alert_type}",
+                    "title": f"{emoji} {api_name.upper()} - {alert_type}",
                     "description": (
                         f"**Thời gian:** {current_time}\n"
-                        f"**Dữ liệu cũ:** {hours} giờ {minutes} phút {secs} giây"
+                        f"{symbol_field}"
+                        f"**Nội dung:** {error_message}\n"
+                        f"**Dữ liệu cũ:** {hours} giờ {minutes} phút {secs} giây\n"
+                        f"**Ngưỡng cho phép:** {allow_hours} giờ {allow_minutes} phút {allow_secs} giây\n"
+                        f"**Tần suất kiểm tra:** {check_frequency} giây\n"
+                        f"**Thời gian gửi message tiếp theo (nếu còn lỗi):** {next_time_str}"
                     ),
                     "color": color,
                 }

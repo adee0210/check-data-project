@@ -51,10 +51,67 @@ class CheckAPI:
                 continue
 
             # Thực hiện kiểm tra dữ liệu
-            r = requests.get(url=uri)
-            record_pointer_data_with_column_to_check = r.json()["data"][record_pointer][
-                column_to_check
-            ]
+            try:
+                r = requests.get(url=uri, timeout=10)
+                r.raise_for_status()  # Raise exception cho HTTP errors
+
+                data = r.json()
+                record_pointer_data_with_column_to_check = data["data"][record_pointer][
+                    column_to_check
+                ]
+
+                error_message = "Không có dữ liệu mới"
+                api_error = False
+
+            except requests.exceptions.Timeout:
+                error_message = "Lỗi API: Timeout khi gọi API"
+                api_error = True
+                self.logger_api.error(f"{error_message} cho {display_name}")
+            except requests.exceptions.ConnectionError:
+                error_message = "Lỗi API: Không thể kết nối đến server"
+                api_error = True
+                self.logger_api.error(f"{error_message} cho {display_name}")
+            except requests.exceptions.HTTPError as e:
+                error_message = f"Lỗi API: HTTP {e.response.status_code}"
+                api_error = True
+                self.logger_api.error(f"{error_message} cho {display_name}")
+            except (KeyError, IndexError) as e:
+                error_message = f"Lỗi API: Dữ liệu không đúng format - {str(e)}"
+                api_error = True
+                self.logger_api.error(f"{error_message} cho {display_name}")
+            except Exception as e:
+                error_message = f"Lỗi API: {str(e)}"
+                api_error = True
+                self.logger_api.error(f"{error_message} cho {display_name}")
+
+            if api_error:
+                # Xử lý lỗi API - gửi cảnh báo nếu cần
+                current_time = datetime.now()
+                last_alert = self.last_alert_times.get(display_name)
+
+                should_send_alert = False
+                if last_alert is None:
+                    should_send_alert = True
+                else:
+                    time_since_last_alert = (current_time - last_alert).total_seconds()
+                    if time_since_last_alert >= alert_frequency:
+                        should_send_alert = True
+
+                if should_send_alert:
+                    self.platform_util.send_alert_message(
+                        api_name=api_name,
+                        symbol=symbol,
+                        overdue_seconds=0,  # Không biết được thời gian data cũ
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="error",
+                        error_message=error_message,
+                    )
+                    self.last_alert_times[display_name] = current_time
+
+                await asyncio.sleep(check_frequency)
+                continue
 
             dt_record_pointer_data_with_column_to_check = (
                 ConvertDatetimeUtil.convert_str_to_datetime(
@@ -106,7 +163,10 @@ class CheckAPI:
                         symbol=symbol,
                         overdue_seconds=overdue_seconds,
                         allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
                         alert_level="warning",
+                        error_message=error_message,
                     )
                     # Cập nhật thời gian alert cuối
                     self.last_alert_times[display_name] = current_time
