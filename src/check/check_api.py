@@ -27,6 +27,7 @@ class CheckAPI:
         uri = api_config.get("uri")
         record_pointer = api_config.get("record_pointer")
         column_to_check = api_config.get("column_to_check")
+        timezone_offset = api_config.get("timezone_offset", 7)  # Mặc định GMT+7
         allow_delay = api_config.get("allow_delay")
         check_frequency = api_config.get("check_frequency")
         valid_time = api_config.get("valid_time", {})
@@ -59,6 +60,15 @@ class CheckAPI:
                 )
             )
 
+            # Chuyển đổi từ múi giờ của data sang giờ local (GMT+7)
+            if timezone_offset != 7:  # Chỉ convert nếu không phải GMT+7
+                dt_record_pointer_data_with_column_to_check = (
+                    ConvertDatetimeUtil.convert_utc_to_local(
+                        dt_record_pointer_data_with_column_to_check,
+                        timezone_offset=7 - timezone_offset,
+                    )
+                )
+
             # Sử dụng DataValidator để kiểm tra dữ liệu
             is_fresh, overdue_seconds = DataValidator.is_data_fresh(
                 dt_record_pointer_data_with_column_to_check, allow_delay
@@ -68,8 +78,8 @@ class CheckAPI:
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
                 )
-                self.logger_api.info(
-                    f"Dữ liệu cũ hơn ngưỡng cho phép {time_str} cho {display_name}"
+                self.logger_api.warning(
+                    f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
                 )
             else:
                 self.logger_api.info(f"Đã nhận dữ liệu mới cho {display_name}")

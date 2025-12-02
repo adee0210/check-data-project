@@ -27,7 +27,6 @@ class DataValidator:
     def format_time_overdue(seconds, allow_delay_seconds):
         """
         Chuyển đổi số giây quá hạn sang định dạng giờ phút giây
-        Hiển thị cả thời gian quá hạn và ngưỡng cho phép
         """
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
@@ -36,4 +35,4 @@ class DataValidator:
         allow_hours = allow_delay_seconds // 3600
         allow_minutes = (allow_delay_seconds % 3600) // 60
 
-        return f"{hours} giờ {minutes} phút {secs} giây (ngưỡng: {allow_hours} giờ {allow_minutes} phút)"
+        return f"{hours} giờ {minutes} phút {secs} giây (ngưỡng {allow_hours} giờ {allow_minutes} phút)"
