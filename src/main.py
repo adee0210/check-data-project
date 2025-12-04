@@ -16,6 +16,7 @@ sys.path.insert(0, str(project_root))
 
 from check.check_api import CheckAPI
 from check.check_database import CheckDatabase
+from check.check_disk import CheckDisk
 
 
 import asyncio
@@ -28,7 +29,14 @@ async def main():
     # Chạy Database checks
     db_checker = CheckDatabase()
 
-    await asyncio.gather(api_checker.run_api_tasks(), db_checker.run_database_tasks())
+    # Chạy Disk checks
+    # disk_checker = CheckDisk()
+
+    await asyncio.gather(
+        api_checker.run_api_tasks(),
+        db_checker.run_database_tasks(),
+        # disk_checker.run_disk_tasks(),
+    )
 
 
 asyncio.run(main())

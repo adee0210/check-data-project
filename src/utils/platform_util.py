@@ -10,7 +10,8 @@ class PlatformUtil:
 
     def _load_platform_config(self):
         """Load platform config from JSON file"""
-        return LoadConfigUtil.load_json_to_variable("config.json", "PLATFORM_CONFIG")
+        config = LoadConfigUtil.load_json_to_variable("common_config.json")
+        return config["PLATFORM_CONFIG"]
 
     def get_primary_platform(self):
         # Reload config mỗi lần gọi để đảm bảo cập nhật

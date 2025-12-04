@@ -10,16 +10,16 @@ class LoadConfigUtil:
     _last_modified = {}
 
     @staticmethod
-    def load_json_to_variable(filename, config_type):
+    def load_json_to_variable(filename, config_type=None):
         """
-        Tìm và load file JSON, trả về config theo type
+        Tìm và load file JSON, trả về config theo type hoặc toàn bộ file
 
         Args:
-            filename: Tên file JSON (vd: "config.json")
-            config_type: Loại config muốn lấy (vd: "API_CONFIG", "DATABASE_CONFIG")
+            filename: Tên file JSON (vd: "api_config.json", "database_config.json")
+            config_type: (Optional) Loại config muốn lấy. Nếu None, trả về toàn bộ file
 
         Returns:
-            Dict config theo type yêu cầu
+            Dict config theo type yêu cầu hoặc toàn bộ config
         """
         # Tìm file
         files = glob.glob(f"**/{filename}", recursive=True)
@@ -30,7 +30,7 @@ class LoadConfigUtil:
 
         # Kiểm tra file có thay đổi không (để reload)
         current_mtime = os.path.getmtime(file_path)
-        cache_key = f"{file_path}:{config_type}"
+        cache_key = f"{file_path}:{config_type}" if config_type else file_path
 
         if cache_key in LoadConfigUtil._cache:
             if LoadConfigUtil._last_modified.get(cache_key) == current_mtime:
@@ -41,14 +41,20 @@ class LoadConfigUtil:
         with open(file=file_path, mode="r", encoding="utf-8") as f:
             data = json.load(f)
 
-        if config_type not in data:
-            raise KeyError(f"Không tìm thấy '{config_type}' trong file {filename}")
+        # Nếu có config_type, lấy theo type
+        if config_type:
+            if config_type not in data:
+                raise KeyError(f"Không tìm thấy '{config_type}' trong file {filename}")
+            result = data[config_type]
+        else:
+            # Không có config_type, trả về toàn bộ
+            result = data
 
         # Cache lại
-        LoadConfigUtil._cache[cache_key] = data[config_type]
+        LoadConfigUtil._cache[cache_key] = result
         LoadConfigUtil._last_modified[cache_key] = current_mtime
 
-        return data[config_type]
+        return result
 
     @staticmethod
     def reload_config(filename, config_type):

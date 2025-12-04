@@ -27,7 +27,7 @@ class CheckAPI:
 
     def _load_config(self):
         """Load config from JSON file (called every check cycle)"""
-        return LoadConfigUtil.load_json_to_variable("config.json", "API_CONFIG")
+        return LoadConfigUtil.load_json_to_variable("check_api_config.json")
 
     async def check_data_api(self, api_name, api_config, symbol=None):
         """Hàm logic check data cho API chạy liên tục"""
@@ -240,5 +240,55 @@ class CheckAPI:
 
     async def run_api_tasks(self):
         """Chạy tất cả các task kiểm tra API với config được load động"""
-        config_api = self._load_config()
-        await self.task_manager_api.run_tasks(self.check_data_api, config_api)
+        running_tasks = {}  # {display_name: task}
+
+        while True:
+            # Reload config để phát hiện thay đổi
+            config_api = self._load_config()
+
+            # Tạo list các item cần check
+            expected_items = set()
+            for api_name, api_config in config_api.items():
+                symbols = api_config.get("symbols")
+                if symbols:
+                    for symbol in symbols:
+                        expected_items.add(f"{api_name}-{symbol}")
+                else:
+                    expected_items.add(api_name)
+
+            # Phát hiện item mới cần start task
+            current_items = set(running_tasks.keys())
+            new_items = expected_items - current_items
+            removed_items = current_items - expected_items
+
+            # Cancel các task không còn trong config
+            for item_name in removed_items:
+                if item_name in running_tasks:
+                    running_tasks[item_name].cancel()
+                    del running_tasks[item_name]
+                    self.logger_api.info(f"Đã dừng task cho {item_name}")
+
+            # Start task mới
+            for api_name, api_config in config_api.items():
+                symbols = api_config.get("symbols")
+                if symbols:
+                    for symbol in symbols:
+                        display_name = f"{api_name}-{symbol}"
+                        if display_name in new_items:
+                            task = asyncio.create_task(
+                                self.check_data_api(api_name, api_config, symbol)
+                            )
+                            running_tasks[display_name] = task
+                            self.logger_api.info(
+                                f"Đã start task mới cho {display_name}"
+                            )
+                else:
+                    if api_name in new_items:
+                        task = asyncio.create_task(
+                            self.check_data_api(api_name, api_config, None)
+                        )
+                        running_tasks[api_name] = task
+                        self.logger_api.info(f"Đã start task mới cho {api_name}")
+
+            # Chờ 10 giây trước khi reload config
+            await asyncio.sleep(10)

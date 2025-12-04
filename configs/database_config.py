@@ -48,12 +48,9 @@ class DatabaseConfig:
         """
         from utils.load_config_util import LoadConfigUtil
 
-        POSTGRE_CONFIG = LoadConfigUtil.load_json_to_variable(
-            "config.json", "POSTGRE_CONFIG"
-        )
-        MONGO_CONFIG = LoadConfigUtil.load_json_to_variable(
-            "config.json", "MONGO_CONFIG"
-        )
+        common_config = LoadConfigUtil.load_json_to_variable("common_config.json")
+        POSTGRE_CONFIG = common_config["POSTGRE_CONFIG"]
+        MONGO_CONFIG = common_config["MONGO_CONFIG"]
 
         if db_type == "postgresql":
             return {

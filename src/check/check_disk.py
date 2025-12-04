@@ -1,21 +1,21 @@
 import asyncio
 from datetime import datetime
+import os
+from pathlib import Path
 
-from utils.convert_datetime_util import ConvertDatetimeUtil
 from logic_check.time_validator import TimeValidator
 from logic_check.data_validator import DataValidator
 
 from configs.logging_config import LoggerConfig
-from configs.database_config import DatabaseConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
 from utils.platform_util import PlatformUtil
 
 
-class CheckDatabase:
+class CheckDisk:
     def __init__(self):
-        self.logger_db = LoggerConfig.logger_config("CheckDatabase")
-        self.task_manager_db = TaskManager()
+        self.logger_disk = LoggerConfig.logger_config("CheckDisk")
+        self.task_manager_disk = TaskManager()
         self.platform_util = PlatformUtil()
 
         # Tracking alert frequency: {display_name: last_alert_time}
@@ -25,62 +25,71 @@ class CheckDatabase:
         self.first_stale_times = {}
         self.suspected_holidays = {}
 
-        # Database connector
-        self.db_connector = DatabaseConfig()
-
     def _load_config(self):
         """Load config from JSON file (called every check cycle)"""
-        return LoadConfigUtil.load_json_to_variable("check_database_config.json")
+        return LoadConfigUtil.load_json_to_variable("check_disk_config.json")
 
-    async def check_data_database(self, db_name, db_config, symbol=None):
-        """Hàm logic check data từ database chạy liên tục"""
-        timezone_offset = db_config.get("timezone_offset", 7)
-        allow_delay = db_config.get("allow_delay")
-        alert_frequency = db_config.get("alert_frequency", 60)
-        check_frequency = db_config.get("check_frequency")
-        valid_schedule = db_config.get("valid_schedule", {})
-        holiday_grace_period = db_config.get("holiday_grace_period", 2 * 3600)
+    async def check_data_disk(self, disk_name, disk_config, symbol=None):
+        """Hàm logic check file/folder trên disk chạy liên tục"""
+        file_path = disk_config.get("file_path")  # Đường dẫn file/folder
+        check_type = disk_config.get("check_type", "mtime")  # mtime, ctime, atime
+        timezone_offset = disk_config.get("timezone_offset", 7)
+        allow_delay = disk_config.get("allow_delay")
+        alert_frequency = disk_config.get("alert_frequency")
+        check_frequency = disk_config.get("check_frequency")
+        valid_schedule = disk_config.get("valid_schedule", {})
 
-        # Tạo display name
         if symbol:
-            display_name = f"{db_name}-{symbol}"
+            file_path = file_path.format(symbol=symbol)
+            display_name = f"{disk_name}-{symbol}"
         else:
-            display_name = db_name
+            display_name = disk_name
 
         while True:
             # Kiểm tra valid_schedule
             if not TimeValidator.is_within_valid_schedule(valid_schedule):
-                self.logger_db.info(
+                self.logger_disk.info(
                     f"Ngoài lịch kiểm tra cho {display_name}, bỏ qua..."
                 )
                 await asyncio.sleep(60)
                 continue
 
-            # Thực hiện query database
             try:
-                latest_time = self.db_connector.query(db_name, db_config, symbol)
+                # Kiểm tra file/folder tồn tại
+                path = Path(file_path)
+                if not path.exists():
+                    raise FileNotFoundError(f"Không tìm thấy file/folder: {file_path}")
 
-                if latest_time is None:
-                    raise ValueError("Không có dữ liệu")
+                # Lấy thời gian modify/create/access
+                if check_type == "mtime":
+                    timestamp = path.stat().st_mtime
+                elif check_type == "ctime":
+                    timestamp = path.stat().st_ctime
+                elif check_type == "atime":
+                    timestamp = path.stat().st_atime
+                else:
+                    raise ValueError(f"check_type không hợp lệ: {check_type}")
 
-                error_message = "Không có dữ liệu mới"
-                db_error = False
+                # Convert timestamp sang datetime
+                file_datetime = datetime.fromtimestamp(timestamp)
 
-            except ConnectionError as e:
-                error_message = f"Lỗi Database: Không thể kết nối - {str(e)}"
-                db_error = True
-                self.logger_db.error(f"{error_message} cho {display_name}")
-            except ValueError as e:
-                error_message = f"Lỗi Database: {str(e)}"
-                db_error = True
-                self.logger_db.error(f"{error_message} cho {display_name}")
+                error_message = "File/folder không cập nhật"
+                disk_error = False
+
+            except FileNotFoundError as e:
+                error_message = f"Lỗi Disk: {str(e)}"
+                disk_error = True
+                self.logger_disk.error(f"{error_message} cho {display_name}")
+            except (ValueError, OSError) as e:
+                error_message = f"Lỗi Disk: {str(e)}"
+                disk_error = True
+                self.logger_disk.error(f"{error_message} cho {display_name}")
             except Exception as e:
-                error_message = f"Lỗi Database: {str(e)}"
-                db_error = True
-                self.logger_db.error(f"{error_message} cho {display_name}")
+                error_message = f"Lỗi Disk: {str(e)}"
+                disk_error = True
+                self.logger_disk.error(f"{error_message} cho {display_name}")
 
-            if db_error:
-                # Xử lý lỗi database - gửi cảnh báo nếu cần
+            if disk_error:
                 current_time = datetime.now()
                 last_alert = self.last_alert_times.get(display_name)
 
@@ -94,7 +103,7 @@ class CheckDatabase:
 
                 if should_send_alert:
                     self.platform_util.send_alert_message(
-                        api_name=db_name,
+                        api_name=disk_name,
                         symbol=symbol,
                         overdue_seconds=0,
                         allow_delay=allow_delay,
@@ -108,40 +117,30 @@ class CheckDatabase:
                 await asyncio.sleep(check_frequency)
                 continue
 
-            # Convert datetime
-            dt_latest_time = ConvertDatetimeUtil.convert_str_to_datetime(latest_time)
-
-            # Chuyển đổi timezone nếu cần
-            if timezone_offset != 7:
-                dt_latest_time = ConvertDatetimeUtil.convert_utc_to_local(
-                    dt_latest_time,
-                    timezone_offset=7 - timezone_offset,
-                )
-
-            # Kiểm tra data fresh
+            # Kiểm tra file_datetime fresh
             is_fresh, overdue_seconds = DataValidator.is_data_fresh(
-                dt_latest_time, allow_delay
+                file_datetime, allow_delay
             )
 
             if not is_fresh:
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
                 )
-                self.logger_db.warning(
-                    f"CẢNH BÁO: Dữ liệu database quá hạn {time_str} cho {display_name}"
+                self.logger_disk.warning(
+                    f"CẢNH BÁO: File/folder quá hạn {time_str} cho {display_name}"
                 )
 
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
-                # Smart holiday detection - track stale databases
+                # Smart holiday detection
                 if display_name not in self.first_stale_times:
                     self.first_stale_times[display_name] = current_time
 
                 # Tracking suspected holidays
                 if current_date not in self.suspected_holidays:
                     self.suspected_holidays[current_date] = {
-                        "db_count": 0,
+                        "file_count": 0,
                         "first_detected": current_time,
                     }
 
@@ -150,17 +149,16 @@ class CheckDatabase:
                     for name, stale_time in self.first_stale_times.items()
                     if (current_time - stale_time).total_seconds() > allow_delay
                 )
-                self.suspected_holidays[current_date]["db_count"] = stale_count
+                self.suspected_holidays[current_date]["file_count"] = stale_count
 
-                total_dbs = len(self.first_stale_times)
-                is_suspected_holiday = stale_count >= max(2, total_dbs * 0.5)
+                total_items = len(self.first_stale_times)
+                is_suspected_holiday = stale_count >= max(2, total_items * 0.5)
 
                 # Kiểm tra alert frequency
                 last_alert = self.last_alert_times.get(display_name)
 
                 should_send_alert = False
                 if last_alert is None:
-                    # Gửi alert ngay lần đầu tiên khi quá hạn
                     should_send_alert = True
                 else:
                     time_since_last_alert = (current_time - last_alert).total_seconds()
@@ -170,16 +168,16 @@ class CheckDatabase:
                 if should_send_alert:
                     if is_suspected_holiday:
                         context_message = (
-                            f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_dbs} database đang thiếu data). "
+                            f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_items} file đang thiếu cập nhật). "
                             f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
                         )
                         alert_level = "info"
                     else:
-                        context_message = "Dữ liệu database quá hạn"
+                        context_message = "File/folder không được cập nhật"
                         alert_level = "warning"
 
                     self.platform_util.send_alert_message(
-                        api_name=db_name,
+                        api_name=disk_name,
                         symbol=symbol,
                         overdue_seconds=overdue_seconds,
                         allow_delay=allow_delay,
@@ -189,40 +187,39 @@ class CheckDatabase:
                         error_message=context_message,
                     )
                     self.last_alert_times[display_name] = current_time
-                    self.logger_db.info(
+                    self.logger_disk.info(
                         f"Đã gửi alert cho {display_name}. Alert tiếp theo sau {alert_frequency}s"
                     )
             else:
-                self.logger_db.info(f"Dữ liệu database mới cho {display_name}")
+                self.logger_disk.info(f"File/folder được cập nhật cho {display_name}")
                 # Reset tracking
                 if display_name in self.last_alert_times:
                     del self.last_alert_times[display_name]
                 if display_name in self.first_stale_times:
                     del self.first_stale_times[display_name]
 
-            self.logger_db.info(f"Kiểm tra database cho {display_name}")
+            self.logger_disk.info(f"Kiểm tra disk cho {display_name} tại {file_path}")
 
-            # Sleep
+            # Sleep theo check_frequency
             await asyncio.sleep(check_frequency)
 
-    async def run_database_tasks(self):
-        """Chạy tất cả các task kiểm tra database với config được load động"""
+    async def run_disk_tasks(self):
+        """Chạy tất cả các task kiểm tra disk với config được load động"""
         running_tasks = {}  # {display_name: task}
 
         while True:
             # Reload config để phát hiện thay đổi
-            config_db = self._load_config()
+            config_disk = self._load_config()
 
             # Tạo list các item cần check
             expected_items = set()
-            for db_name, db_config in config_db.items():
-                symbol_column = db_config.get("symbol_column")
-                if symbol_column:
-                    # Nếu có symbol_column, cần query distinct values (chưa implement)
-                    # Tạm thời chỉ check db_name
-                    expected_items.add(db_name)
+            for disk_name, disk_config in config_disk.items():
+                symbols = disk_config.get("symbols")
+                if symbols:
+                    for symbol in symbols:
+                        expected_items.add(f"{disk_name}-{symbol}")
                 else:
-                    expected_items.add(db_name)
+                    expected_items.add(disk_name)
 
             # Phát hiện item mới cần start task
             current_items = set(running_tasks.keys())
@@ -234,21 +231,29 @@ class CheckDatabase:
                 if item_name in running_tasks:
                     running_tasks[item_name].cancel()
                     del running_tasks[item_name]
-                    self.logger_db.info(f"Đã dừng task cho {item_name}")
+                    self.logger_disk.info(f"Đã dừng task cho {item_name}")
 
             # Start task mới
-            for db_name in new_items:
-                if db_name in config_db:
-                    db_config = config_db[db_name]
-                    task = asyncio.create_task(
-                        self.check_data_database(db_name, db_config, None)
-                    )
-                    running_tasks[db_name] = task
-                    self.logger_db.info(f"Đã start task mới cho {db_name}")
+            for disk_name, disk_config in config_disk.items():
+                symbols = disk_config.get("symbols")
+                if symbols:
+                    for symbol in symbols:
+                        display_name = f"{disk_name}-{symbol}"
+                        if display_name in new_items:
+                            task = asyncio.create_task(
+                                self.check_data_disk(disk_name, disk_config, symbol)
+                            )
+                            running_tasks[display_name] = task
+                            self.logger_disk.info(
+                                f"Đã start task mới cho {display_name}"
+                            )
+                else:
+                    if disk_name in new_items:
+                        task = asyncio.create_task(
+                            self.check_data_disk(disk_name, disk_config, None)
+                        )
+                        running_tasks[disk_name] = task
+                        self.logger_disk.info(f"Đã start task mới cho {disk_name}")
 
             # Chờ 10 giây trước khi reload config
             await asyncio.sleep(10)
-
-    def close_connections(self):
-        """Đóng tất cả database connections"""
-        self.db_connector.close()
