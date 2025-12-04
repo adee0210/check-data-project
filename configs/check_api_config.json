@@ -33,5 +33,29 @@
         "check_frequency": 60,
         "alert_frequency": 60,
         "valid_schedule": null
+    },
+    "etf_candlestick": {
+        "auto_sync_symbols": true,
+        "symbols": null,
+        "uri": "http://192.168.110.164:8010/crypto/etf-candlestick/?symbol={symbol}&day=0",
+        "record_pointer": 0,
+        "column_to_check": "datetime",
+        "timezone_offset": 0,
+        "allow_delay": 30,
+        "check_frequency": 10,
+        "alert_frequency": 60,
+        "valid_schedule": {
+            "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "hours": [
+                "9:00-11:30",
+                "13:00-14:30"
+            ]
+        }
     }
 }

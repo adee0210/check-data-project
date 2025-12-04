@@ -25,6 +25,9 @@ class CheckDisk:
         self.first_stale_times = {}
         self.suspected_holidays = {}
 
+        # Tracking outside schedule status: {display_name: is_outside}
+        self.outside_schedule_logged = {}
+
     def _load_config(self):
         """Load config from JSON file (called every check cycle)"""
         return LoadConfigUtil.load_json_to_variable("check_disk_config.json")
@@ -47,12 +50,25 @@ class CheckDisk:
 
         while True:
             # Kiểm tra valid_schedule
-            if not TimeValidator.is_within_valid_schedule(valid_schedule):
-                self.logger_disk.info(
-                    f"Ngoài lịch kiểm tra cho {display_name}, bỏ qua..."
-                )
+            is_within_schedule = TimeValidator.is_within_valid_schedule(valid_schedule)
+
+            if not is_within_schedule:
+                # Chỉ log 1 lần khi vào trạng thái ngoài giờ
+                if not self.outside_schedule_logged.get(display_name, False):
+                    self.logger_disk.info(
+                        f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
+                    )
+                    self.outside_schedule_logged[display_name] = True
+
                 await asyncio.sleep(60)
                 continue
+            else:
+                # Reset flag khi vào lại trong giờ
+                if self.outside_schedule_logged.get(display_name, False):
+                    self.logger_disk.info(
+                        f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
+                    )
+                    self.outside_schedule_logged[display_name] = False
 
             try:
                 # Kiểm tra file/folder tồn tại

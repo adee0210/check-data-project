@@ -12,6 +12,16 @@ class SymbolResolverUtil:
 
     logger = LoggerConfig.logger_config("SymbolResolverUtil")
 
+    # Singleton DatabaseConfig instance - reuse across all queries
+    _db_connector = None
+
+    @staticmethod
+    def _get_db_connector():
+        """Get or create DatabaseConfig singleton instance"""
+        if SymbolResolverUtil._db_connector is None:
+            SymbolResolverUtil._db_connector = DatabaseConfig()
+        return SymbolResolverUtil._db_connector
+
     @staticmethod
     def get_symbols_from_database(api_name):
         """
@@ -91,8 +101,8 @@ class SymbolResolverUtil:
             list: Danh sách symbols
         """
         try:
-            # Tạo DatabaseConfig instance và kết nối
-            db_config_instance = DatabaseConfig()
+            # Reuse DatabaseConfig singleton instance
+            db_connector = SymbolResolverUtil._get_db_connector()
 
             # Build config cho MongoDB connection
             db_config = {
@@ -101,8 +111,8 @@ class SymbolResolverUtil:
                 "collection_name": collection_name,
             }
 
-            # Kết nối MongoDB
-            db = db_config_instance.connect(f"temp_{database}", db_config)
+            # Kết nối MongoDB (reuse existing connection nếu có)
+            db = db_connector.connect(f"resolver_{database}", db_config)
             if db is None:
                 SymbolResolverUtil.logger.error(
                     f"Không thể kết nối MongoDB: {database}"
@@ -113,8 +123,8 @@ class SymbolResolverUtil:
             collection = db[collection_name]
             symbols = collection.distinct(symbol_column)
 
-            # Đóng kết nối
-            db_config_instance.close(f"temp_{database}")
+            # KHÔNG đóng connection - để reuse cho lần sau
+            # Connection sẽ được quản lý bởi DatabaseConfig singleton
 
             # Filter None/empty values và sort
             symbols = [s for s in symbols if s]
@@ -141,8 +151,8 @@ class SymbolResolverUtil:
             list: Danh sách symbols
         """
         try:
-            # Tạo DatabaseConfig instance và kết nối
-            db_config_instance = DatabaseConfig()
+            # Reuse DatabaseConfig singleton instance
+            db_connector = SymbolResolverUtil._get_db_connector()
 
             # Build config cho PostgreSQL connection
             db_config = {
@@ -151,8 +161,8 @@ class SymbolResolverUtil:
                 "table_name": table_name,
             }
 
-            # Kết nối PostgreSQL
-            conn = db_config_instance.connect(f"temp_{database}", db_config)
+            # Kết nối PostgreSQL (reuse existing connection nếu có)
+            conn = db_connector.connect(f"resolver_{database}", db_config)
             if conn is None:
                 SymbolResolverUtil.logger.error(
                     f"Không thể kết nối PostgreSQL: {database}"
@@ -166,9 +176,8 @@ class SymbolResolverUtil:
 
             symbols = [row[0] for row in cursor.fetchall()]
 
-            # Đóng cursor và connection
+            # Đóng cursor (nhưng KHÔNG đóng connection - để reuse)
             cursor.close()
-            db_config_instance.close(f"temp_{database}")
 
             return symbols
 
