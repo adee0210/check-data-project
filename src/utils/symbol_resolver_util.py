@@ -34,9 +34,9 @@ class SymbolResolverUtil:
             list: Danh sách symbols hoặc None nếu không tìm thấy
         """
         try:
-            # Load database config
+            # Load database config từ file chung
             db_config_all = LoadConfigUtil.load_json_to_variable(
-                "check_database_config.json"
+                "data_sources_config.json"
             )
 
             # Kiểm tra xem có database config cùng tên không

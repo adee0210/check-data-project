@@ -1,6 +1,11 @@
 {
     "gold-data": {
-        "symbol_column": null,
+        "enable_api_check": true,
+        "enable_db_check": true,
+        "auto_sync_symbols": null,
+        "symbols": null,
+        "api_url": "http://192.168.110.164:8010/gold-data/?day=0",
+        "record_pointer": 0,
         "db_type": "mongodb",
         "database": "gold_db",
         "collection_name": "gold_minute_data",
@@ -22,8 +27,59 @@
             ]
         }
     },
+    "cmc": {
+        "enable_api_check": true,
+        "enable_db_check": true,
+        "auto_sync_symbols": true,
+        "symbols": null,
+        "api_url": "http://192.168.110.164:8010/crypto/cmc/?symbol={symbol}&day=0",
+        "record_pointer": 0,
+        "db_type": "mongodb",
+        "database": "cmc_db",
+        "collection_name": "cmc",
+        "symbol_column": "symbol",
+        "column_to_check": "datetime",
+        "timezone_offset": 0,
+        "allow_delay": 1800,
+        "check_frequency": 60,
+        "alert_frequency": 60,
+        "valid_schedule": null
+    },
+    "etf_candlestick": {
+        "enable_api_check": true,
+        "enable_db_check": true,
+        "auto_sync_symbols": true,
+        "symbols": null,
+        "api_url": "http://192.168.110.164:8010/crypto/etf-candlestick/?symbol={symbol}&day=0",
+        "record_pointer": 0,
+        "db_type": "mongodb",
+        "database": "etf_candlestick_db",
+        "collection_name": "etf_candlestick",
+        "symbol_column": "symbol",
+        "column_to_check": "datetime",
+        "timezone_offset": 0,
+        "allow_delay": 30,
+        "check_frequency": 10,
+        "alert_frequency": 60,
+        "valid_schedule": {
+            "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "hours": [
+                "9:00-11:30",
+                "13:00-14:30"
+            ]
+        }
+    },
     "btc-dominance": {
-        "symbol_column": null,
+        "enable_api_check": false,
+        "enable_db_check": true,
+        "auto_sync_symbols": null,
+        "symbols": null,
         "db_type": "mongodb",
         "database": "btc_dominance",
         "collection_name": "raw_btc_dominance",
@@ -34,20 +90,11 @@
         "alert_frequency": 60,
         "valid_schedule": null
     },
-    "cmc": {
-        "symbol_column": "symbol",
-        "db_type": "mongodb",
-        "database": "cmc_db",
-        "collection_name": "cmc",
-        "column_to_check": "datetime",
-        "timezone_offset": 0,
-        "allow_delay": 1800,
-        "check_frequency": 60,
-        "alert_frequency": 60,
-        "valid_schedule": null
-    },
     "ssi": {
-        "symbol_column": null,
+        "enable_api_check": false,
+        "enable_db_check": true,
+        "auto_sync_symbols": null,
+        "symbols": null,
         "db_type": "mongodb",
         "database": "ckvn_raw",
         "collection_name": "vn30f1m_trade_realtime_ssi",
@@ -71,7 +118,10 @@
         }
     },
     "vps": {
-        "symbol_column": null,
+        "enable_api_check": false,
+        "enable_db_check": true,
+        "auto_sync_symbols": null,
+        "symbols": null,
         "db_type": "mongodb",
         "database": "ckvn_raw",
         "collection_name": "vn30f1m_trade_realtime_vps",
@@ -95,37 +145,16 @@
         }
     },
     "vn100": {
-        "symbol_column": null,
+        "enable_api_check": false,
+        "enable_db_check": true,
+        "auto_sync_symbols": null,
+        "symbols": null,
         "db_type": "postgresql",
         "database": "vn100",
         "table": "vn100",
         "column_to_check": "datetime",
         "timezone_offset": 0,
         "allow_delay": 86400,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "9:00-11:30",
-                "13:00-14:30"
-            ]
-        }
-    },
-    "etf_candlestick": {
-        "symbol_column": "symbol",
-        "db_type": "",
-        "database": "etf_candlestick_db",
-        "collection_name": "etf_candlestick",
-        "column_to_check": "datetime",
-        "timezone_offset": 0,
-        "allow_delay": 30,
         "check_frequency": 10,
         "alert_frequency": 60,
         "valid_schedule": {

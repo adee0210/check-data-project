@@ -33,7 +33,9 @@ class CheckDatabase:
 
     def _load_config(self):
         """Load config from JSON file (called every check cycle)"""
-        return LoadConfigUtil.load_json_to_variable("check_database_config.json")
+        all_config = LoadConfigUtil.load_json_to_variable("data_sources_config.json")
+        # Filter chỉ lấy những config có enable_db_check = true
+        return {k: v for k, v in all_config.items() if v.get("enable_db_check", False)}
 
     async def check_data_database(self, db_name, db_config, symbol=None):
         """Hàm logic check data từ database chạy liên tục"""

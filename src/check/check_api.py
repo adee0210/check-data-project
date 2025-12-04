@@ -32,11 +32,13 @@ class CheckAPI:
 
     def _load_config(self):
         """Load config from JSON file (called every check cycle)"""
-        return LoadConfigUtil.load_json_to_variable("check_api_config.json")
+        all_config = LoadConfigUtil.load_json_to_variable("data_sources_config.json")
+        # Filter chỉ lấy những config có enable_api_check = true
+        return {k: v for k, v in all_config.items() if v.get("enable_api_check", False)}
 
     async def check_data_api(self, api_name, api_config, symbol=None):
         """Hàm logic check data cho API chạy liên tục"""
-        uri = api_config.get("uri")
+        uri = api_config.get("api_url") or api_config.get("uri")
         record_pointer = api_config.get("record_pointer")
         column_to_check = api_config.get("column_to_check")
         timezone_offset = api_config.get("timezone_offset")
