@@ -70,14 +70,7 @@ class SymbolResolverUtil:
             else:
                 return None
 
-            if symbols:
-                SymbolResolverUtil.logger.info(
-                    f"Đã lấy được {len(symbols)} symbols từ database '{api_name}': {symbols}"
-                )
-            else:
-                SymbolResolverUtil.logger.warning(
-                    f"Database '{api_name}' chưa có dữ liệu hoặc không có symbols"
-                )
+            # Không log ở đây nữa - sẽ log trong resolve_api_symbols()
 
             return symbols
 
