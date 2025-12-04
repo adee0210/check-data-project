@@ -163,7 +163,6 @@ class DatabaseConfig:
         return db
 
     def _get_required_package(self, db_type):
-        """Trả về tên package cần cài đặt"""
         packages = {
             "postgresql": "psycopg2-binary",
             "mongodb": "pymongo",
