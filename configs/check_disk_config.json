@@ -1,22 +1,24 @@
 ﻿{
-    \"server-log\": {
-        \"symbols\": null,
-        \"file_path\": \"/var/log/server.log\",
-        \"check_type\": \"mtime\",
-        \"timezone_offset\": 7,
-        \"allow_delay\": 300,
-        \"check_frequency\": 60,
-        \"alert_frequency\": 300,
-        \"valid_schedule\": null
+    "server-log": {
+        "symbols": null,
+        "uri": "http://192.168.110.164:8010/disk/server-log/?day=0",
+        "record_pointer": 0,
+        "column_to_check": "datetime",
+        "timezone_offset": 7,
+        "allow_delay": 300,
+        "check_frequency": 60,
+        "alert_frequency": 300,
+        "valid_schedule": null
     },
-    \"backup-files\": {
-        \"symbols\": null,
-        \"file_path\": \"/backup/daily\",
-        \"check_type\": \"mtime\",
-        \"timezone_offset\": 7,
-        \"allow_delay\": 86400,
-        \"check_frequency\": 3600,
-        \"alert_frequency\": 7200,
-        \"valid_schedule\": null
+    "backup-files": {
+        "symbols": null,
+        "uri": "http://192.168.110.164:8010/disk/backup-files/?day=0",
+        "record_pointer": -1,
+        "column_to_check": "datetime",
+        "timezone_offset": 7,
+        "allow_delay": 86400,
+        "check_frequency": 3600,
+        "alert_frequency": 7200,
+        "valid_schedule": null
     }
 }

@@ -19,6 +19,9 @@ class ConvertDatetimeUtil:
 
         Args:
             datetime_str: String hoặc datetime object
+                         Hỗ trợ các format:
+                         - "2025-12-04 14:30:00" (datetime đầy đủ)
+                         - "2025-12-04" (chỉ ngày, giờ mặc định 00:00:00)
 
         Returns:
             datetime object hoặc None nếu lỗi
@@ -29,10 +32,16 @@ class ConvertDatetimeUtil:
 
         # Nếu là string, parse theo format
         try:
+            # Thử parse format đầy đủ "YYYY-MM-DD HH:MM:SS"
             return datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
-        except ValueError as e:
-            print(f"Lỗi convert datetime: {e}")
-            return None
+        except ValueError:
+            try:
+                # Thử parse format chỉ ngày "YYYY-MM-DD"
+                return datetime.datetime.strptime(datetime_str, "%Y-%m-%d")
+            except ValueError as e:
+                print(f"Lỗi convert datetime: {e}")
+                print(f"String nhận được: {datetime_str}")
+                return None
 
     @staticmethod
     def convert_utc_to_local(utc_datetime, timezone_offset=7):

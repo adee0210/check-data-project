@@ -6,7 +6,7 @@
         "collection_name": "gold_minute_data",
         "column_to_check": "datetime",
         "timezone_offset": 7,
-        "allow_delay": 90,
+        "allow_delay": 70,
         "check_frequency": 10,
         "alert_frequency": 60,
         "valid_schedule": {
@@ -21,6 +21,18 @@
                 "00:00-23:59"
             ]
         }
+    },
+    "btc-dominance": {
+        "symbol_column": null,
+        "db_type": "mongodb",
+        "database": "btc_dominance",
+        "collection_name": "raw_btc_dominance",
+        "column_to_check": "datetime",
+        "timezone_offset": 7,
+        "allow_delay": 86400,
+        "check_frequency": 60,
+        "alert_frequency": 60,
+        "valid_schedule": null
     },
     "cmc": {
         "symbol_column": "symbol",
@@ -42,7 +54,7 @@
         "column_to_check": "datetime",
         "timezone_offset": 0,
         "allow_delay": 10,
-        "check_frequency": 10,
+        "check_frequency": 30,
         "alert_frequency": 60,
         "valid_schedule": {
             "days": [
@@ -65,7 +77,31 @@
         "collection_name": "vn30f1m_trade_realtime_vps",
         "column_to_check": "datetime",
         "timezone_offset": 0,
-        "allow_delay": 10,
+        "allow_delay": 30,
+        "check_frequency": 10,
+        "alert_frequency": 60,
+        "valid_schedule": {
+            "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "hours": [
+                "9:00-11:30",
+                "13:00-14:30"
+            ]
+        }
+    },
+    "etf_candlestick": {
+        "symbol_column": "symbol",
+        "db_type": "mongodb",
+        "database": "etf_candlestick_db",
+        "collection_name": "etf_candlestick",
+        "column_to_check": "datetime",
+        "timezone_offset": 0,
+        "allow_delay": 30,
         "check_frequency": 10,
         "alert_frequency": 60,
         "valid_schedule": {

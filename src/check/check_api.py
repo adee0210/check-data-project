@@ -10,6 +10,7 @@ from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
 from utils.platform_util import PlatformUtil
+from utils.symbol_resolver_util import SymbolResolverUtil
 
 
 class CheckAPI:
@@ -249,12 +250,19 @@ class CheckAPI:
             # Tạo list các item cần check
             expected_items = set()
             for api_name, api_config in config_api.items():
-                symbols = api_config.get("symbols")
-                if symbols:
+                # Resolve symbols dựa trên auto_sync_symbols
+                symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
+
+                if symbols is None:
+                    # API không cần symbols (ví dụ: gold-data)
+                    expected_items.add(api_name)
+                elif isinstance(symbols, list) and len(symbols) > 0:
+                    # Có symbols: tạo task cho từng symbol
                     for symbol in symbols:
                         expected_items.add(f"{api_name}-{symbol}")
                 else:
-                    expected_items.add(api_name)
+                    # Empty list: skip API này (đã có warning trong resolver)
+                    continue
 
             # Phát hiện item mới cần start task
             current_items = set(running_tasks.keys())
@@ -270,8 +278,19 @@ class CheckAPI:
 
             # Start task mới
             for api_name, api_config in config_api.items():
-                symbols = api_config.get("symbols")
-                if symbols:
+                # Resolve symbols dựa trên auto_sync_symbols
+                symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
+
+                if symbols is None:
+                    # API không cần symbols
+                    if api_name in new_items:
+                        task = asyncio.create_task(
+                            self.check_data_api(api_name, api_config, None)
+                        )
+                        running_tasks[api_name] = task
+                        self.logger_api.info(f"Đã start task mới cho {api_name}")
+                elif isinstance(symbols, list) and len(symbols) > 0:
+                    # Có symbols: tạo task cho từng symbol
                     for symbol in symbols:
                         display_name = f"{api_name}-{symbol}"
                         if display_name in new_items:
@@ -282,13 +301,6 @@ class CheckAPI:
                             self.logger_api.info(
                                 f"Đã start task mới cho {display_name}"
                             )
-                else:
-                    if api_name in new_items:
-                        task = asyncio.create_task(
-                            self.check_data_api(api_name, api_config, None)
-                        )
-                        running_tasks[api_name] = task
-                        self.logger_api.info(f"Đã start task mới cho {api_name}")
 
             # Chờ 10 giây trước khi reload config
             await asyncio.sleep(10)
