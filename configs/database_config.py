@@ -204,9 +204,9 @@ class DatabaseConfig:
         column_to_check = db_config.get("column_to_check", "datetime")
         symbol_column = db_config.get("symbol_column")
 
-        table_name = db_config.get("table_name")
+        table_name = db_config.get("table") or db_config.get("table_name")
         if not table_name:
-            raise ValueError("Thiếu table_name trong config")
+            raise ValueError("Thiếu table hoặc table_name trong config")
 
         query = f"SELECT {column_to_check} FROM {table_name}"
         if symbol and symbol_column:
