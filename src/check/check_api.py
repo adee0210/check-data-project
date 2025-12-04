@@ -264,11 +264,15 @@ class CheckAPI:
             # Reload config để phát hiện thay đổi
             config_api = self._load_config()
 
+            # Cache symbols để tránh gọi resolve 2 lần
+            symbols_cache = {}
+
             # Tạo list các item cần check
             expected_items = set()
             for api_name, api_config in config_api.items():
-                # Resolve symbols dựa trên auto_sync_symbols
+                # Resolve symbols dựa trên auto_sync_symbols và cache kết quả
                 symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
+                symbols_cache[api_name] = symbols
 
                 if symbols is None:
                     # API không cần symbols (ví dụ: gold-data)
@@ -293,10 +297,10 @@ class CheckAPI:
                     del running_tasks[item_name]
                     self.logger_api.info(f"Đã dừng task cho {item_name}")
 
-            # Start task mới
+            # Start task mới - dùng symbols từ cache
             for api_name, api_config in config_api.items():
-                # Resolve symbols dựa trên auto_sync_symbols
-                symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
+                # Lấy symbols từ cache (đã resolve ở trên)
+                symbols = symbols_cache[api_name]
 
                 if symbols is None:
                     # API không cần symbols
