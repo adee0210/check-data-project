@@ -91,16 +91,30 @@ class SymbolResolverUtil:
             list: Danh sách symbols
         """
         try:
-            # Kết nối MongoDB
-            mongo_client = DatabaseConfig.connect_mongodb()
-            db = mongo_client[database]
-            collection = db[collection_name]
+            # Tạo DatabaseConfig instance và kết nối
+            db_config_instance = DatabaseConfig()
 
-            # Lấy distinct symbols
+            # Build config cho MongoDB connection
+            db_config = {
+                "db_type": "mongodb",
+                "database": database,
+                "collection_name": collection_name,
+            }
+
+            # Kết nối MongoDB
+            db = db_config_instance.connect(f"temp_{database}", db_config)
+            if db is None:
+                SymbolResolverUtil.logger.error(
+                    f"Không thể kết nối MongoDB: {database}"
+                )
+                return []
+
+            # Lấy collection và query distinct symbols
+            collection = db[collection_name]
             symbols = collection.distinct(symbol_column)
 
             # Đóng kết nối
-            mongo_client.close()
+            db_config_instance.close(f"temp_{database}")
 
             # Filter None/empty values và sort
             symbols = [s for s in symbols if s]
@@ -127,24 +141,41 @@ class SymbolResolverUtil:
             list: Danh sách symbols
         """
         try:
+            # Tạo DatabaseConfig instance và kết nối
+            db_config_instance = DatabaseConfig()
+
+            # Build config cho PostgreSQL connection
+            db_config = {
+                "db_type": "postgresql",
+                "database": database,
+                "table_name": table_name,
+            }
+
             # Kết nối PostgreSQL
-            postgres_conn = DatabaseConfig.connect_postgresql()
-            cursor = postgres_conn.cursor()
+            conn = db_config_instance.connect(f"temp_{database}", db_config)
+            if conn is None:
+                SymbolResolverUtil.logger.error(
+                    f"Không thể kết nối PostgreSQL: {database}"
+                )
+                return []
 
             # Query distinct symbols
             query = f"SELECT DISTINCT {symbol_column} FROM {table_name} ORDER BY {symbol_column}"
+            cursor = conn.cursor()
             cursor.execute(query)
 
             symbols = [row[0] for row in cursor.fetchall()]
 
-            # Đóng kết nối
+            # Đóng cursor và connection
             cursor.close()
-            postgres_conn.close()
+            db_config_instance.close(f"temp_{database}")
 
             return symbols
 
         except Exception as e:
-            print(f"Lỗi khi query PostgreSQL: {e}")
+            SymbolResolverUtil.logger.error(
+                f"Lỗi khi query PostgreSQL ({database}.{table_name}): {e}"
+            )
             return []
 
     @staticmethod
@@ -181,12 +212,12 @@ class SymbolResolverUtil:
 
             if auto_symbols and len(auto_symbols) > 0:
                 SymbolResolverUtil.logger.info(
-                    f"✓ [{api_name}] Đã đồng bộ {len(auto_symbols)} symbols từ database: {auto_symbols}"
+                    f"[{api_name}] Đã đồng bộ {len(auto_symbols)} symbols từ database: {auto_symbols}"
                 )
                 return auto_symbols
             else:
                 SymbolResolverUtil.logger.warning(
-                    f"✗ [{api_name}] Không tìm thấy symbols từ database. "
+                    f"[{api_name}] Không tìm thấy symbols từ database. "
                     f"Kiểm tra database config hoặc chuyển sang auto_sync_symbols=false để nhập thủ công."
                 )
                 return []
@@ -202,7 +233,7 @@ class SymbolResolverUtil:
                 return symbols
             else:
                 SymbolResolverUtil.logger.warning(
-                    f"✗ [{api_name}] auto_sync_symbols=false nhưng không có symbols được định nghĩa. "
+                    f"[{api_name}] auto_sync_symbols=false nhưng không có symbols được định nghĩa. "
                     f'Vui lòng thêm \'symbols\': ["SYMBOL1", "SYMBOL2"] vào config.'
                 )
                 return []
