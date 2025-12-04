@@ -8,7 +8,7 @@ from logic_check.data_validator import DataValidator
 
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
-from configs.config import API_CONFIG, PLATFORM_CONFIG
+from utils.load_config_util import LoadConfigUtil
 from utils.platform_util import PlatformUtil
 
 
@@ -16,14 +16,18 @@ class CheckAPI:
     def __init__(self):
         self.logger_api = LoggerConfig.logger_config("CheckAPI")
         self.task_manager_api = TaskManager()
-        self.config_api = API_CONFIG
-        self.config_platform = PLATFORM_CONFIG
         self.platform_util = PlatformUtil()
 
+        # Tracking alert frequency: {display_name: last_alert_time}
         self.last_alert_times = {}
 
+        # Smart holiday detection
         self.first_stale_times = {}
         self.suspected_holidays = {}
+
+    def _load_config(self):
+        """Load config from JSON file (called every check cycle)"""
+        return LoadConfigUtil.load_json_to_variable("config.json", "API_CONFIG")
 
     async def check_data_api(self, api_name, api_config, symbol=None):
         """Hàm logic check data cho API chạy liên tục"""
@@ -235,4 +239,6 @@ class CheckAPI:
             await asyncio.sleep(check_frequency)
 
     async def run_api_tasks(self):
-        await self.task_manager_api.run_tasks(self.check_data_api, self.config_api)
+        """Chạy tất cả các task kiểm tra API với config được load động"""
+        config_api = self._load_config()
+        await self.task_manager_api.run_tasks(self.check_data_api, config_api)

@@ -1,14 +1,20 @@
 import requests
 import datetime
-from configs.config import PLATFORM_CONFIG
+from utils.load_config_util import LoadConfigUtil
 
 
 class PlatformUtil:
     def __init__(self):
-        self.config = PLATFORM_CONFIG
+        self.config = self._load_platform_config()
         self.primary_platform, self.primary_settings = self.get_primary_platform()
 
+    def _load_platform_config(self):
+        """Load platform config from JSON file"""
+        return LoadConfigUtil.load_json_to_variable("config.json", "PLATFORM_CONFIG")
+
     def get_primary_platform(self):
+        # Reload config mỗi lần gọi để đảm bảo cập nhật
+        self.config = self._load_platform_config()
         for platform, settings in self.config.items():
             if settings.get("is_primary", False):
                 return platform, settings

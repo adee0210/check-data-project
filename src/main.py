@@ -28,7 +28,6 @@ async def main():
     # Chạy Database checks
     db_checker = CheckDatabase()
 
-    # Chạy song song cả API và Database checks
     await asyncio.gather(api_checker.run_api_tasks(), db_checker.run_database_tasks())
 
 

@@ -8,7 +8,7 @@ from logic_check.data_validator import DataValidator
 from configs.logging_config import LoggerConfig
 from configs.database_config import DatabaseConfig
 from utils.task_manager_util import TaskManager
-from configs.config import DATABASE_CONFIG, PLATFORM_CONFIG
+from utils.load_config_util import LoadConfigUtil
 from utils.platform_util import PlatformUtil
 
 
@@ -16,8 +16,6 @@ class CheckDatabase:
     def __init__(self):
         self.logger_db = LoggerConfig.logger_config("CheckDatabase")
         self.task_manager_db = TaskManager()
-        self.config_db = DATABASE_CONFIG
-        self.config_platform = PLATFORM_CONFIG
         self.platform_util = PlatformUtil()
 
         # Tracking alert frequency: {display_name: last_alert_time}
@@ -29,6 +27,10 @@ class CheckDatabase:
 
         # Database connector
         self.db_connector = DatabaseConfig()
+
+    def _load_config(self):
+        """Load config from JSON file (called every check cycle)"""
+        return LoadConfigUtil.load_json_to_variable("config.json", "DATABASE_CONFIG")
 
     async def check_data_database(self, db_name, db_config, symbol=None):
         """Hàm logic check data từ database chạy liên tục"""
@@ -132,15 +134,9 @@ class CheckDatabase:
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
-                # Smart holiday detection
+                # Smart holiday detection - track stale databases
                 if display_name not in self.first_stale_times:
                     self.first_stale_times[display_name] = current_time
-                    self.logger_db.info(
-                        f"Bắt đầu tracking data cũ cho {display_name}, chờ grace period..."
-                    )
-
-                first_stale_time = self.first_stale_times[display_name]
-                time_since_stale = (current_time - first_stale_time).total_seconds()
 
                 # Tracking suspected holidays
                 if current_date not in self.suspected_holidays:
@@ -159,23 +155,12 @@ class CheckDatabase:
                 total_dbs = len(self.first_stale_times)
                 is_suspected_holiday = stale_count >= max(2, total_dbs * 0.5)
 
-                # Grace period
-                if time_since_stale < holiday_grace_period:
-                    grace_remaining = holiday_grace_period - time_since_stale
-                    grace_minutes = int(grace_remaining / 60)
-                    self.logger_db.info(
-                        f"Data cũ cho {display_name}, đang trong grace period. "
-                        f"Còn {grace_minutes} phút trước khi gửi alert."
-                        f"{' (Nghi ngờ ngày lễ)' if is_suspected_holiday else ''}"
-                    )
-                    await asyncio.sleep(check_frequency)
-                    continue
-
                 # Kiểm tra alert frequency
                 last_alert = self.last_alert_times.get(display_name)
 
                 should_send_alert = False
                 if last_alert is None:
+                    # Gửi alert ngay lần đầu tiên khi quá hạn
                     should_send_alert = True
                 else:
                     time_since_last_alert = (current_time - last_alert).total_seconds()
@@ -188,8 +173,10 @@ class CheckDatabase:
                             f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_dbs} database đang thiếu data). "
                             f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
                         )
+                        alert_level = "info"
                     else:
                         context_message = "Dữ liệu database quá hạn"
+                        alert_level = "warning"
 
                     self.platform_util.send_alert_message(
                         api_name=db_name,
@@ -198,10 +185,13 @@ class CheckDatabase:
                         allow_delay=allow_delay,
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
-                        alert_level="warning" if not is_suspected_holiday else "info",
+                        alert_level=alert_level,
                         error_message=context_message,
                     )
                     self.last_alert_times[display_name] = current_time
+                    self.logger_db.info(
+                        f"Đã gửi alert cho {display_name}. Alert tiếp theo sau {alert_frequency}s"
+                    )
             else:
                 self.logger_db.info(f"Dữ liệu database mới cho {display_name}")
                 # Reset tracking
@@ -216,8 +206,9 @@ class CheckDatabase:
             await asyncio.sleep(check_frequency)
 
     async def run_database_tasks(self):
-        """Chạy tất cả các task kiểm tra database"""
-        await self.task_manager_db.run_tasks(self.check_data_database, self.config_db)
+        """Chạy tất cả các task kiểm tra database với config được load động"""
+        config_db = self._load_config()
+        await self.task_manager_db.run_tasks(self.check_data_database, config_db)
 
     def close_connections(self):
         """Đóng tất cả database connections"""

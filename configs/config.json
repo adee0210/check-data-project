@@ -1,0 +1,127 @@
+{
+    "API_CONFIG": {
+        "gold-data": {
+            "symbols": null,
+            "uri": "http://192.168.110.164:8010/gold-data/?day=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime",
+            "timezone_offset": 7,
+            "allow_delay": 70,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "valid_schedule": {
+                "days": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "hours": [
+                    "00:00-23:59"
+                ]
+            }
+        },
+        "cmc": {
+            "symbols": [
+                "ETH",
+                "BNB",
+                "XRP"
+            ],
+            "uri": "http://192.168.110.164:8010/crypto/cmc/?symbol={symbol}&day=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime",
+            "timezone_offset": 0,
+            "allow_delay": 1800,
+            "check_frequency": 60,
+            "alert_frequency": 60,
+            "valid_schedule": null
+        }
+    },
+    "PLATFORM_CONFIG": {
+        "discord": {
+            "webhooks_url": "https://discord.com/api/webhooks/1444980293542088786/JhmtaTkgngBYnwbA827wBKfymjnUouliRU0Ktgy1BrsWfge0BEAJSj0kq8RQxr_O7y45",
+            "is_primary": true
+        },
+        "telegram": {
+            "bot_token": "",
+            "chat_id": "",
+            "is_primary": false
+        }
+    },
+    "POSTGRE_CONFIG": {
+        "host": "192.168.110.31",
+        "port": 5434,
+        "database": "dl_ckvn",
+        "user": "le_duc",
+        "password": "ducle1610"
+    },
+    "MONGO_CONFIG": {
+        "host": "192.168.110.164",
+        "port": 27017,
+        "username": "duc_le",
+        "password": "ducle1908",
+        "auth_source": "admin"
+    },
+    "DATABASE_CONFIG": {
+        "gold-data": {
+            "symbol_column": null,
+            "db_type": "mongodb",
+            "database": "gold_db",
+            "collection_name": "gold_minute_data",
+            "column_to_check": "datetime",
+            "timezone_offset": 7,
+            "allow_delay": 90,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "valid_schedule": {
+                "days": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "hours": [
+                    "00:00-23:59"
+                ]
+            }
+        },
+        "cmc": {
+            "symbol_column": "symbol",
+            "db_type": "mongodb",
+            "database": "cmc_db",
+            "collection_name": "cmc",
+            "column_to_check": "datetime",
+            "timezone_offset": 0,
+            "allow_delay": 1800,
+            "check_frequency": 60,
+            "alert_frequency": 60,
+            "valid_schedule": null
+        },
+        "ssi": {
+            "symbol_column": null,
+            "db_type": "mongodb",
+            "database": "ckvn_raw",
+            "collection_name": "vn30f1m_trade_realtime_ssi",
+            "column_to_check": "datetime",
+            "timezone_offset": 0,
+            "allow_delay": 10,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "valid_schedule": {
+                "days": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "hours": [
+                    "9:00-11:30",
+                    "13:00-14:30"
+                ]
+            }
+        }
+    }
+}

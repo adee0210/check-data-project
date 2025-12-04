@@ -9,6 +9,10 @@ class DataValidator:
         """
         Kiểm tra xem dữ liệu có còn mới không (dựa vào allow_delay)
 
+        Logic: So sánh data_datetime với time_threshold (current_time - allow_delay)
+        - Nếu data_datetime >= time_threshold → FRESH (trong thời gian cho phép)
+        - Nếu data_datetime < time_threshold → OVERDUE (quá hạn)
+
         Returns:
             tuple: (is_fresh, overdue_seconds)
         """

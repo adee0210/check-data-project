@@ -14,6 +14,20 @@ class ConvertDatetimeUtil:
 
     @staticmethod
     def convert_str_to_datetime(datetime_str):
+        """
+        Chuyển đổi string hoặc datetime object thành datetime object
+
+        Args:
+            datetime_str: String hoặc datetime object
+
+        Returns:
+            datetime object hoặc None nếu lỗi
+        """
+        # Nếu đã là datetime object, trả về luôn
+        if isinstance(datetime_str, datetime.datetime):
+            return datetime_str
+
+        # Nếu là string, parse theo format
         try:
             return datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
         except ValueError as e:
