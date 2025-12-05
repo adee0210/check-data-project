@@ -8,6 +8,7 @@
         "allow_delay": 300,
         "check_frequency": 60,
         "alert_frequency": 300,
+        "max_stale_days": 3,
         "valid_schedule": null
     },
     "backup-files": {
@@ -19,6 +20,7 @@
         "allow_delay": 86400,
         "check_frequency": 3600,
         "alert_frequency": 7200,
+        "max_stale_days": 7,
         "valid_schedule": null
     }
 }

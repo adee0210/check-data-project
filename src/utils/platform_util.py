@@ -31,6 +31,7 @@ class PlatformUtil:
         alert_frequency,
         alert_level="warning",
         error_message="Không có dữ liệu mới",
+        error_type=None,
     ):
         """Gửi cảnh báo lên platform khi data quá hạn"""
         platform, settings = self.primary_platform, self.primary_settings
@@ -70,7 +71,11 @@ class PlatformUtil:
             emoji = "🟠"
             color = 0xFFA500  # Orange
         elif alert_level == "error":
-            alert_type = "LỖI"
+            # Nếu có error_type thì thêm vào tiêu đề
+            if error_type:
+                alert_type = f"LỖI {error_type}"
+            else:
+                alert_type = "LỖI"
             emoji = "🔴"
             color = 0xFF0000  # Red
         else:

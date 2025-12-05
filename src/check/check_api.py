@@ -15,7 +15,7 @@ from utils.symbol_resolver_util import SymbolResolverUtil
 
 class CheckAPI:
     def __init__(self):
-        self.logger_api = LoggerConfig.logger_config("CheckAPI")
+        self.logger_api = LoggerConfig.logger_config("CheckAPI", "api.log")
         self.task_manager_api = TaskManager()
         self.platform_util = PlatformUtil()
 
@@ -47,6 +47,9 @@ class CheckAPI:
         check_frequency = api_config.get("check_frequency")
         valid_schedule = api_config.get("valid_schedule", {})
         holiday_grace_period = api_config.get("holiday_grace_period", 2 * 3600)
+        max_stale_days = api_config.get(
+            "max_stale_days", None
+        )  # Số ngày tối đa data cũ trước khi dừng alert
 
         if symbol:
             uri = uri.format(symbol=symbol)
@@ -89,25 +92,30 @@ class CheckAPI:
                 api_error = False
 
             except requests.exceptions.Timeout:
-                error_message = "Lỗi API: Timeout khi gọi API"
+                error_message = "Timeout khi gọi API"
+                error_type = "API"
                 api_error = True
-                self.logger_api.error(f"{error_message} cho {display_name}")
+                self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
             except requests.exceptions.ConnectionError:
-                error_message = "Lỗi API: Không thể kết nối đến server"
+                error_message = "Không thể kết nối đến server"
+                error_type = "API"
                 api_error = True
-                self.logger_api.error(f"{error_message} cho {display_name}")
+                self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
             except requests.exceptions.HTTPError as e:
-                error_message = f"Lỗi API: HTTP {e.response.status_code}"
+                error_message = f"HTTP {e.response.status_code}"
+                error_type = "API"
                 api_error = True
-                self.logger_api.error(f"{error_message} cho {display_name}")
+                self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
             except (KeyError, IndexError) as e:
-                error_message = f"Lỗi API: Dữ liệu không đúng format - {str(e)}"
+                error_message = f"Dữ liệu không đúng format - {str(e)}"
+                error_type = "API"
                 api_error = True
-                self.logger_api.error(f"{error_message} cho {display_name}")
+                self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
             except Exception as e:
-                error_message = f"Lỗi API: {str(e)}"
+                error_message = str(e)
+                error_type = "API"
                 api_error = True
-                self.logger_api.error(f"{error_message} cho {display_name}")
+                self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
 
             if api_error:
                 # Xử lý lỗi API - gửi cảnh báo
@@ -132,6 +140,7 @@ class CheckAPI:
                         alert_frequency=alert_frequency,
                         alert_level="error",
                         error_message=error_message,
+                        error_type=error_type,
                     )
                     self.last_alert_times[display_name] = current_time
 
@@ -221,6 +230,19 @@ class CheckAPI:
                     if time_since_last_alert >= alert_frequency:
                         should_send_alert = True
 
+                # Kiểm tra max_stale_days: Nếu data cũ quá X ngày → dừng gửi alert
+                if max_stale_days is not None and should_send_alert:
+                    total_stale_seconds = overdue_seconds + allow_delay
+                    stale_days = total_stale_seconds / 86400  # Convert to days
+
+                    if stale_days > max_stale_days:
+                        # Data đã cũ quá lâu, dừng gửi alert
+                        self.logger_api.error(
+                            f"LỖI: Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày) - "
+                            f"Data không ổn định hoặc nguồn dữ liệu đã ngừng cập nhật, cần kiểm tra!"
+                        )
+                        should_send_alert = False
+
                 if should_send_alert:
                     # Tạo message với ngữ cảnh
                     if is_suspected_holiday:
@@ -245,15 +267,19 @@ class CheckAPI:
                     # Cập nhật thời gian alert cuối
                     self.last_alert_times[display_name] = current_time
             else:
-                self.logger_api.info(f"Đã nhận dữ liệu mới cho {display_name}")
                 # Reset alert tracking khi data fresh trở lại
                 if display_name in self.last_alert_times:
+                    self.logger_api.info(
+                        f"Data của {display_name} đã có dữ liệu mới, reset tracking và sẵn sàng gửi alert nếu lỗi lại"
+                    )
                     del self.last_alert_times[display_name]
                 # Reset stale tracking
                 if display_name in self.first_stale_times:
                     del self.first_stale_times[display_name]
 
-            self.logger_api.info(f"Kiểm tra dữ liệu cho {display_name} tại {uri}")
+            self.logger_api.info(
+                f"Kiểm tra API {display_name} - {'Có dữ liệu mới' if is_fresh else 'Dữ liệu cũ'}"
+            )
 
             # Sleep theo check_frequency
             await asyncio.sleep(check_frequency)

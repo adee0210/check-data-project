@@ -14,7 +14,7 @@ from utils.platform_util import PlatformUtil
 
 class CheckDisk:
     def __init__(self):
-        self.logger_disk = LoggerConfig.logger_config("CheckDisk")
+        self.logger_disk = LoggerConfig.logger_config("CheckDisk", "disk.log")
         self.task_manager_disk = TaskManager()
         self.platform_util = PlatformUtil()
 
@@ -41,6 +41,9 @@ class CheckDisk:
         alert_frequency = disk_config.get("alert_frequency")
         check_frequency = disk_config.get("check_frequency")
         valid_schedule = disk_config.get("valid_schedule", {})
+        max_stale_days = disk_config.get(
+            "max_stale_days", None
+        )  # Số ngày tối đa data cũ trước khi dừng alert
 
         if symbol:
             file_path = file_path.format(symbol=symbol)
@@ -93,17 +96,20 @@ class CheckDisk:
                 disk_error = False
 
             except FileNotFoundError as e:
-                error_message = f"Lỗi Disk: {str(e)}"
+                error_message = str(e)
+                error_type = "DISK"
                 disk_error = True
-                self.logger_disk.error(f"{error_message} cho {display_name}")
+                self.logger_disk.error(f"Lỗi Disk: {error_message} cho {display_name}")
             except (ValueError, OSError) as e:
-                error_message = f"Lỗi Disk: {str(e)}"
+                error_message = str(e)
+                error_type = "DISK"
                 disk_error = True
-                self.logger_disk.error(f"{error_message} cho {display_name}")
+                self.logger_disk.error(f"Lỗi Disk: {error_message} cho {display_name}")
             except Exception as e:
-                error_message = f"Lỗi Disk: {str(e)}"
+                error_message = str(e)
+                error_type = "DISK"
                 disk_error = True
-                self.logger_disk.error(f"{error_message} cho {display_name}")
+                self.logger_disk.error(f"Lỗi Disk: {error_message} cho {display_name}")
 
             if disk_error:
                 current_time = datetime.now()
@@ -127,6 +133,7 @@ class CheckDisk:
                         alert_frequency=alert_frequency,
                         alert_level="error",
                         error_message=error_message,
+                        error_type=error_type,
                     )
                     self.last_alert_times[display_name] = current_time
 
@@ -181,6 +188,19 @@ class CheckDisk:
                     if time_since_last_alert >= alert_frequency:
                         should_send_alert = True
 
+                # Kiểm tra max_stale_days: Nếu data cũ quá X ngày → dừng gửi alert
+                if max_stale_days is not None and should_send_alert:
+                    total_stale_seconds = overdue_seconds + allow_delay
+                    stale_days = total_stale_seconds / 86400  # Convert to days
+
+                    if stale_days > max_stale_days:
+                        # Data đã cũ quá lâu, dừng gửi alert
+                        self.logger_disk.error(
+                            f"LỖI: Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày) - "
+                            f"Data không ổn định hoặc nguồn dữ liệu đã ngừng cập nhật, cần kiểm tra!"
+                        )
+                        should_send_alert = False
+
                 if should_send_alert:
                     if is_suspected_holiday:
                         context_message = (
@@ -207,14 +227,18 @@ class CheckDisk:
                         f"Đã gửi alert cho {display_name}. Alert tiếp theo sau {alert_frequency}s"
                     )
             else:
-                self.logger_disk.info(f"File/folder được cập nhật cho {display_name}")
                 # Reset tracking
                 if display_name in self.last_alert_times:
+                    self.logger_disk.info(
+                        f"Data của {display_name} đã có dữ liệu mới, reset tracking và sẵn sàng gửi alert nếu lỗi lại"
+                    )
                     del self.last_alert_times[display_name]
                 if display_name in self.first_stale_times:
                     del self.first_stale_times[display_name]
 
-            self.logger_disk.info(f"Kiểm tra disk cho {display_name} tại {file_path}")
+            self.logger_disk.info(
+                f"Kiểm tra disk {display_name} - {'Có dữ liệu mới' if is_fresh else 'Dữ liệu cũ'}"
+            )
 
             # Sleep theo check_frequency
             await asyncio.sleep(check_frequency)

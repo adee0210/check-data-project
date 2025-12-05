@@ -10,11 +10,12 @@ from configs.database_config import DatabaseConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
 from utils.platform_util import PlatformUtil
+from utils.symbol_resolver_util import SymbolResolverUtil
 
 
 class CheckDatabase:
     def __init__(self):
-        self.logger_db = LoggerConfig.logger_config("CheckDatabase")
+        self.logger_db = LoggerConfig.logger_config("CheckDatabase", "database.log")
         self.task_manager_db = TaskManager()
         self.platform_util = PlatformUtil()
 
@@ -45,6 +46,9 @@ class CheckDatabase:
         check_frequency = db_config.get("check_frequency")
         valid_schedule = db_config.get("valid_schedule", {})
         holiday_grace_period = db_config.get("holiday_grace_period", 2 * 3600)
+        max_stale_days = db_config.get(
+            "max_stale_days", None
+        )  # Số ngày tối đa data cũ trước khi dừng alert
 
         # Tạo display name
         if symbol:
@@ -85,17 +89,26 @@ class CheckDatabase:
                 db_error = False
 
             except ConnectionError as e:
-                error_message = f"Lỗi Database: Không thể kết nối - {str(e)}"
+                error_message = f"Không thể kết nối - {str(e)}"
+                error_type = "DATABASE"
                 db_error = True
-                self.logger_db.error(f"{error_message} cho {display_name}")
+                self.logger_db.error(
+                    f"Lỗi Database: {error_message} cho {display_name}"
+                )
             except ValueError as e:
-                error_message = f"Lỗi Database: {str(e)}"
+                error_message = str(e)
+                error_type = "DATABASE"
                 db_error = True
-                self.logger_db.error(f"{error_message} cho {display_name}")
+                self.logger_db.error(
+                    f"Lỗi Database: {error_message} cho {display_name}"
+                )
             except Exception as e:
-                error_message = f"Lỗi Database: {str(e)}"
+                error_message = str(e)
+                error_type = "DATABASE"
                 db_error = True
-                self.logger_db.error(f"{error_message} cho {display_name}")
+                self.logger_db.error(
+                    f"Lỗi Database: {error_message} cho {display_name}"
+                )
 
             if db_error:
                 # Xử lý lỗi database - gửi cảnh báo nếu cần
@@ -120,6 +133,7 @@ class CheckDatabase:
                         alert_frequency=alert_frequency,
                         alert_level="error",
                         error_message=error_message,
+                        error_type=error_type,
                     )
                     self.last_alert_times[display_name] = current_time
 
@@ -185,6 +199,19 @@ class CheckDatabase:
                     if time_since_last_alert >= alert_frequency:
                         should_send_alert = True
 
+                # Kiểm tra max_stale_days: Nếu data cũ quá X ngày → dừng gửi alert
+                if max_stale_days is not None and should_send_alert:
+                    total_stale_seconds = overdue_seconds + allow_delay
+                    stale_days = total_stale_seconds / 86400  # Convert to days
+
+                    if stale_days > max_stale_days:
+                        # Data đã cũ quá lâu, dừng gửi alert
+                        self.logger_db.error(
+                            f"LỖI: Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày) - "
+                            f"Data không ổn định hoặc nguồn dữ liệu đã ngừng cập nhật, cần kiểm tra!"
+                        )
+                        should_send_alert = False
+
                 if should_send_alert:
                     if is_suspected_holiday:
                         context_message = (
@@ -211,14 +238,18 @@ class CheckDatabase:
                         f"Đã gửi alert cho {display_name}. Alert tiếp theo sau {alert_frequency}s"
                     )
             else:
-                self.logger_db.info(f"Dữ liệu database mới cho {display_name}")
                 # Reset tracking
                 if display_name in self.last_alert_times:
+                    self.logger_db.info(
+                        f"Data của {display_name} đã có dữ liệu mới, reset tracking và sẵn sàng gửi alert nếu lỗi lại"
+                    )
                     del self.last_alert_times[display_name]
                 if display_name in self.first_stale_times:
                     del self.first_stale_times[display_name]
 
-            self.logger_db.info(f"Kiểm tra database cho {display_name}")
+            self.logger_db.info(
+                f"Kiểm tra database {display_name} - {'Có dữ liệu mới' if is_fresh else 'Dữ liệu cũ'}"
+            )
 
             # Sleep
             await asyncio.sleep(check_frequency)
@@ -231,16 +262,26 @@ class CheckDatabase:
             # Reload config để phát hiện thay đổi
             config_db = self._load_config()
 
+            # Cache symbols để tránh gọi resolve 2 lần
+            symbols_cache = {}
+
             # Tạo list các item cần check
             expected_items = set()
             for db_name, db_config in config_db.items():
-                symbol_column = db_config.get("symbol_column")
-                if symbol_column:
-                    # Nếu có symbol_column, cần query distinct values (chưa implement)
-                    # Tạm thời chỉ check db_name
+                # Resolve symbols dựa trên auto_sync_symbols và cache kết quả
+                symbols = SymbolResolverUtil.resolve_api_symbols(db_name, db_config)
+                symbols_cache[db_name] = symbols
+
+                if symbols is None:
+                    # Database không cần symbols
                     expected_items.add(db_name)
+                elif isinstance(symbols, list) and len(symbols) > 0:
+                    # Có symbols: tạo task cho từng symbol
+                    for symbol in symbols:
+                        expected_items.add(f"{db_name}-{symbol}")
                 else:
-                    expected_items.add(db_name)
+                    # Empty list: skip database này
+                    continue
 
             # Phát hiện item mới cần start task
             current_items = set(running_tasks.keys())
@@ -254,15 +295,29 @@ class CheckDatabase:
                     del running_tasks[item_name]
                     self.logger_db.info(f"Đã dừng task cho {item_name}")
 
-            # Start task mới
-            for db_name in new_items:
-                if db_name in config_db:
-                    db_config = config_db[db_name]
-                    task = asyncio.create_task(
-                        self.check_data_database(db_name, db_config, None)
-                    )
-                    running_tasks[db_name] = task
-                    self.logger_db.info(f"Đã start task mới cho {db_name}")
+            # Start task mới - dùng symbols từ cache
+            for db_name, db_config in config_db.items():
+                # Lấy symbols từ cache (đã resolve ở trên)
+                symbols = symbols_cache[db_name]
+
+                if symbols is None:
+                    # Database không cần symbols
+                    if db_name in new_items:
+                        task = asyncio.create_task(
+                            self.check_data_database(db_name, db_config, None)
+                        )
+                        running_tasks[db_name] = task
+                        self.logger_db.info(f"Đã start task mới cho {db_name}")
+                elif isinstance(symbols, list) and len(symbols) > 0:
+                    # Có symbols: tạo task cho từng symbol
+                    for symbol in symbols:
+                        display_name = f"{db_name}-{symbol}"
+                        if display_name in new_items:
+                            task = asyncio.create_task(
+                                self.check_data_database(db_name, db_config, symbol)
+                            )
+                            running_tasks[display_name] = task
+                            self.logger_db.info(f"Đã start task mới cho {display_name}")
 
             # Chờ 10 giây trước khi reload config
             await asyncio.sleep(10)
