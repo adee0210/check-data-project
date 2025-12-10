@@ -22,12 +22,13 @@ start() {
     fi
 
     echo "Đang khởi động hệ thống giám sát dữ liệu..."
-    echo "File log: $LOG_FILE"
+    echo "File log: $LOG_DIR/"
     cd "$SCRIPT_DIR"
-    nohup $PYTHON_CMD > "$LOG_FILE" 2>&1 &
+    nohup $PYTHON_CMD &
     echo $! > "$PID_FILE"
     echo "Hệ thống đã khởi động thành công (PID: $(cat "$PID_FILE"))"
-    echo "Sử dụng lệnh 'tail -f $LOG_FILE' để xem log theo thời gian thực"
+    echo "Sử dụng lệnh 'tail -f $LOG_DIR/api.log' để xem log API"
+    echo "Hoặc 'tail -f $LOG_DIR/database.log' để xem log Database"
 }
 
 stop() {
@@ -65,11 +66,16 @@ status() {
         PID=$(cat "$PID_FILE")
         if ps -p "$PID" > /dev/null 2>&1; then
             echo "Hệ thống giám sát dữ liệu đang chạy (PID: $PID)"
-            echo "File log: $LOG_FILE"
+            echo "Thư mục log: $LOG_DIR/"
             echo ""
-            echo "5 dòng log gần nhất:"
+            echo "5 dòng log API gần nhất:"
             echo "----------------------------------------"
-            tail -n 5 "$LOG_FILE" 2>/dev/null || echo "Chưa có log"
+            tail -n 5 "$LOG_DIR/api.log" 2>/dev/null || echo "Chưa có log"
+            echo "----------------------------------------"
+            echo ""
+            echo "5 dòng log Database gần nhất:"
+            echo "----------------------------------------"
+            tail -n 5 "$LOG_DIR/database.log" 2>/dev/null || echo "Chưa có log"
             echo "----------------------------------------"
         else
             echo "File PID tồn tại nhưng tiến trình không chạy"
@@ -80,16 +86,46 @@ status() {
 }
 
 logs() {
-    if [ -f "$LOG_FILE" ]; then
-        echo "Hiển thị 50 dòng log gần nhất từ $LOG_FILE:"
-        echo "========================================"
-        tail -n 50 "$LOG_FILE"
-        echo "========================================"
-        echo ""
-        echo "Sử dụng 'tail -f $LOG_FILE' để xem log theo thời gian thực"
-    else
-        echo "Không tìm thấy file log: $LOG_FILE"
-    fi
+    echo "Chọn loại log muốn xem:"
+    echo "1) API log (api.log)"
+    echo "2) Database log (database.log)"
+    echo "3) Main log (main.log)"
+    echo "4) Tất cả log (tail -f)"
+    read -p "Nhập lựa chọn [1-4]: " choice
+    
+    case $choice in
+        1)
+            if [ -f "$LOG_DIR/api.log" ]; then
+                echo "Hiển thị log API (nhấn Ctrl+C để thoát)..."
+                tail -f "$LOG_DIR/api.log"
+            else
+                echo "Không tìm thấy file log: $LOG_DIR/api.log"
+            fi
+            ;;
+        2)
+            if [ -f "$LOG_DIR/database.log" ]; then
+                echo "Hiển thị log Database (nhấn Ctrl+C để thoát)..."
+                tail -f "$LOG_DIR/database.log"
+            else
+                echo "Không tìm thấy file log: $LOG_DIR/database.log"
+            fi
+            ;;
+        3)
+            if [ -f "$LOG_DIR/main.log" ]; then
+                echo "Hiển thị log Main (nhấn Ctrl+C để thoát)..."
+                tail -f "$LOG_DIR/main.log"
+            else
+                echo "Không tìm thấy file log: $LOG_DIR/main.log"
+            fi
+            ;;
+        4)
+            echo "Hiển thị tất cả log (nhấn Ctrl+C để thoát)..."
+            tail -f "$LOG_DIR"/*.log 2>/dev/null
+            ;;
+        *)
+            echo "Lựa chọn không hợp lệ"
+            ;;
+    esac
 }
 
 health() {

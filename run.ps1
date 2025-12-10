@@ -37,13 +37,13 @@ function Start-Monitoring {
     $ProcessInfo.WorkingDirectory = $SCRIPT_DIR
     $ProcessInfo.UseShellExecute = $false
     $ProcessInfo.CreateNoWindow = $true  # Chạy ngầm không hiện cửa sổ
-    $ProcessInfo.RedirectStandardOutput = $true
-    $ProcessInfo.RedirectStandardError = $true
+    $ProcessInfo.RedirectStandardOutput = $false
+    $ProcessInfo.RedirectStandardError = $false
     
     $Process = New-Object System.Diagnostics.Process
     $Process.StartInfo = $ProcessInfo
     
-    # Redirect output và error đến log file
+    # Bắt đầu process
     $Process.Start() | Out-Null
     
     # Lưu PID

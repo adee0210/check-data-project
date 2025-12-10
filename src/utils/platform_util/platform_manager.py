@@ -181,6 +181,39 @@ class PlatformManager:
 
         return results
 
+    def send_alert_message(
+        self,
+        api_name: str,
+        symbol: Optional[str] = None,
+        overdue_seconds: int = 0,
+        allow_delay: int = 60,
+        check_frequency: int = 10,
+        alert_frequency: int = 60,
+        alert_level: str = "warning",
+        error_message: str = "Không có dữ liệu mới",
+        error_type: Optional[str] = None,
+    ) -> Dict[str, bool]:
+        """
+        Alias method cho send_alert() để tương thích với code cũ
+
+        Args:
+            Xem send_alert() docstring
+
+        Returns:
+            Dict {platform_name: success_status}
+        """
+        return self.send_alert(
+            api_name=api_name,
+            symbol=symbol,
+            overdue_seconds=overdue_seconds,
+            allow_delay=allow_delay,
+            check_frequency=check_frequency,
+            alert_frequency=alert_frequency,
+            alert_level=alert_level,
+            error_message=error_message,
+            error_type=error_type,
+        )
+
     def send_to_specific_platform(
         self,
         platform_name: str,
