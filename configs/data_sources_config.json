@@ -264,5 +264,49 @@
                 "13:00-14:30"
             ]
         }
+    },
+    "tygia": {
+        "api": {
+            "enable": false
+        },
+        "database": {
+            "enable": true,
+            "type": "postgresql",
+            "database": "dl_ckvn",
+            "table": "selling_rate",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "disk": {
+            "enable": true,
+            "file_type": "csv",
+            "file_path": "/home/duc_le/nas/data/lsqd/tygia.csv",
+            "record_pointer": 0,
+            "column_to_check": "day"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 86400,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "max_stale_days": 7
+        },
+        "schedule": {
+            "valid_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "time_ranges": [
+                "09:00-09:45"
+            ]
+        }
     }
 }

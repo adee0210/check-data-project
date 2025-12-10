@@ -48,14 +48,14 @@ class CheckDisk:
             k: v for k, v in all_config.items() if v.get("disk", {}).get("enable", False)
         }
 
-    def _read_datetime_from_file(self, file_path: str, file_type: str, record_pointer: str, column_to_check: str) -> datetime:
+    def _read_datetime_from_file(self, file_path: str, file_type: str, record_pointer: int, column_to_check: str) -> datetime:
         """
         Đọc datetime từ file (json, csv, txt)
 
         Args:
             file_path: Đường dẫn file
             file_type: Loại file ("json", "csv", "txt")
-            record_pointer: Vị trí record ("first", "last")
+            record_pointer: Vị trí record (0 = mới nhất, -1 = cũ nhất)
             column_to_check: Tên cột chứa datetime
 
         Returns:
@@ -76,7 +76,7 @@ class CheckDisk:
             if not isinstance(data, list) or len(data) == 0:
                 raise ValueError("File JSON rỗng hoặc không phải array")
             
-            record_index = 0 if record_pointer == "first" else -1
+            record_index = -1 if record_pointer == 0 else 0
             record = data[record_index]
             
             if column_to_check not in record:
@@ -93,7 +93,7 @@ class CheckDisk:
             if len(rows) == 0:
                 raise ValueError("File CSV rỗng")
             
-            record_index = 0 if record_pointer == "first" else -1
+            record_index = -1 if record_pointer == 0 else 0
             record = rows[record_index]
             
             if column_to_check not in record:
@@ -109,7 +109,7 @@ class CheckDisk:
             if len(lines) == 0:
                 raise ValueError("File TXT rỗng")
             
-            line_index = 0 if record_pointer == "first" else -1
+            line_index = -1 if record_pointer == 0 else 0
             datetime_str = lines[line_index]
             
             return ConvertDatetimeUtil.convert_str_to_datetime(datetime_str)
@@ -133,7 +133,7 @@ class CheckDisk:
 
         file_path = disk_cfg.get("file_path")
         file_type = disk_cfg.get("file_type", "mtime")  # json, csv, txt, hoặc mtime
-        record_pointer = disk_cfg.get("record_pointer", "last")  # first hoặc last
+        record_pointer = disk_cfg.get("record_pointer", 0)  # 0 = mới nhất, -1 = cũ nhất
         column_to_check = disk_cfg.get("column_to_check", "datetime")
 
         timezone_offset = check_cfg.get("timezone_offset", 7)

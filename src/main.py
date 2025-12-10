@@ -49,13 +49,13 @@ async def main():
     db_checker = CheckDatabase()
 
     # Khởi tạo Disk checker (tùy chọn)
-    # disk_checker = CheckDisk()
+    disk_checker = CheckDisk()
 
     # Chạy tất cả tasks song song
     await asyncio.gather(
         api_checker.run_api_tasks(),
         db_checker.run_database_tasks(),
-        # disk_checker.run_disk_tasks(),
+        disk_checker.run_disk_tasks(),
     )
 
 
