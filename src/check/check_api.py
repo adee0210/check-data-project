@@ -21,14 +21,11 @@ class CheckAPI:
         self.task_manager_api = TaskManager()
         self.platform_util = PlatformManager()
 
-        # Tracking alert frequency: {display_name: last_alert_time}
         self.last_alert_times = {}
 
-        # Smart holiday detection
         self.first_stale_times = {}
         self.suspected_holidays = {}
 
-        # Tracking outside schedule status: {display_name: is_outside}
         # Để chỉ log 1 lần khi vào/ra khỏi schedule
         self.outside_schedule_logged = {}
 
