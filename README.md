@@ -23,7 +23,7 @@ Kiểm tra HTTP API responses, parse JSON và so sánh timestamp
 Hỗ trợ MongoDB và PostgreSQL, tối ưu queries với MAX/MIN và projection
 
 ### 📁 Disk Files
-Kiểm tra file/folder modification time (mtime, ctime, atime)
+Đọc nội dung file (JSON, CSV, TXT) hoặc kiểm tra file modification time
 
 ### ✨ Tính Năng Chính
 
@@ -34,6 +34,8 @@ Kiểm tra file/folder modification time (mtime, ctime, atime)
 - 🏖️ **Holiday Detection**: Phát hiện ngày lễ thông minh
 - 📢 **Multi-Platform Alerts**: Discord, Telegram (dễ thêm Slack, Email...)
 - 🛑 **Auto Shutdown**: Dừng task khi data cũ quá ngưỡng
+- 📂 **File Content Reading**: Hỗ trợ đọc JSON, CSV, TXT để lấy datetime
+- ⏰ **Flexible Scheduling**: Schedule riêng cho từng data source
 
 ---
 
@@ -42,10 +44,11 @@ Kiểm tra file/folder modification time (mtime, ctime, atime)
 ### Yêu Cầu
 
 - Python 3.7+
-- MongoDB hoặc PostgreSQL (optional)
+- MongoDB hoặc PostgreSQL (optional, nếu dùng Database monitoring)
 
 ### Cài Đặt Dependencies
 
+#### Linux/Mac
 ```bash
 # Clone repository
 git clone https://github.com/adee0210/check-data-project
@@ -55,9 +58,23 @@ cd check_data_project
 python -m venv .venv
 
 # Kích hoạt
-.venv\Scripts\Activate.ps1  # Windows PowerShell
-# hoặc
-source .venv/bin/activate    # Linux/Mac
+source .venv/bin/activate
+
+# Cài packages
+pip install -r requirements.txt
+```
+
+#### Windows
+```powershell
+# Clone repository
+git clone https://github.com/adee0210/check-data-project
+cd check_data_project
+
+# Tạo virtual environment
+python -m venv .venv
+
+# Kích hoạt
+.venv\Scripts\Activate.ps1
 
 # Cài packages
 pip install -r requirements.txt
@@ -69,21 +86,20 @@ pip install -r requirements.txt
 check_data_project/
 ├── configs/                            # Cấu hình
 │   ├── common_config.json              # Platform + DB credentials
-│   ├── data_sources_config.json        # Data sources
-│   ├── check_disk_config.json          # Disk monitoring
+│   ├── data_sources_config.json        # Data sources (API, DB, Disk)
 │   ├── database_config/                # Database connectors
 │   │   ├── base_db.py                  # Abstract base class
 │   │   ├── mongo_config.py             # MongoDB connector
 │   │   ├── postgres_config.py          # PostgreSQL connector
 │   │   └── database_manager.py         # Factory manager
-│   └── logging_config.py               # Logging config
+│   └── logging_config.py               # Logging config (10MB/file, 5 files)
 │
 ├── src/
 │   ├── main.py                         # Entry point
 │   ├── check/                          # Monitors
 │   │   ├── check_api.py                # API monitor
 │   │   ├── check_database.py           # Database monitor
-│   │   └── check_disk.py               # Disk monitor
+│   │   └── check_disk.py               # Disk/File monitor
 │   ├── logic_check/                    # Business logic
 │   │   ├── data_validator.py           # Data freshness validation
 │   │   └── time_validator.py           # Schedule validation
@@ -93,12 +109,15 @@ check_data_project/
 │       │   ├── discord_util.py         # Discord notifier
 │       │   ├── telegram_util.py        # Telegram notifier
 │       │   └── platform_manager.py     # Factory manager
-│       ├── load_config_util.py         # Config loader
+│       ├── load_config_util.py         # Config loader with caching
 │       ├── symbol_resolver_util.py     # Symbol resolver
+│       ├── task_manager_util.py        # Task manager
 │       └── convert_datetime_util.py    # Datetime utils
 │
 ├── cache/                              # Auto-generated cache
-├── logs/                               # Log files
+├── logs/                               # Log files (api.log, database.log, main.log)
+├── run.sh                              # Linux/Mac startup script
+├── run.ps1                             # Windows startup script
 └── requirements.txt
 ```
 
@@ -140,15 +159,15 @@ check_data_project/
 
 ### 3.2. Data Sources Config (`data_sources_config.json`)
 
-Cấu trúc hierarchical với 5 sections:
+**Cấu trúc thống nhất cho tất cả data sources:**
 
 ```json
 {
   "source-name": {
     "api": {
       "enable": true,
-      "url": "http://example.com/api?symbol={symbol}",
-      "record_pointer": 0,
+      "url": "https://api.example.com/data?symbol={symbol}",
+      "record_pointer": "first",
       "column_to_check": "datetime"
     },
     "database": {
@@ -156,7 +175,14 @@ Cấu trúc hierarchical với 5 sections:
       "type": "mongodb",
       "database": "db_name",
       "collection_name": "collection",
-      "record_pointer": 0,
+      "record_pointer": "first",
+      "column_to_check": "datetime"
+    },
+    "disk": {
+      "enable": true,
+      "file_type": "json",
+      "file_path": "/path/to/file.json",
+      "record_pointer": "first",
       "column_to_check": "datetime"
     },
     "symbols": {
@@ -172,8 +198,8 @@ Cấu trúc hierarchical với 5 sections:
       "max_stale_days": 3
     },
     "schedule": {
-      "days": [0, 1, 2, 3, 4],
-      "hours": ["9:00-11:30", "13:00-14:30"]
+      "valid_days": [0, 1, 2, 3, 4],
+      "time_ranges": ["09:00-11:30", "13:00-14:30"]
     }
   }
 }
@@ -184,7 +210,7 @@ Cấu trúc hierarchical với 5 sections:
 **api section:**
 - `enable`: Bật/tắt kiểm tra API
 - `url`: API endpoint, có thể dùng `{symbol}` placeholder
-- `record_pointer`: `0` = mới nhất, `-1` = cũ nhất
+- `record_pointer`: `"first"` = record đầu tiên, `"last"` = record cuối cùng
 - `column_to_check`: Field chứa timestamp trong JSON response
 
 **database section:**
@@ -192,7 +218,15 @@ Cấu trúc hierarchical với 5 sections:
 - `type`: `"mongodb"` hoặc `"postgresql"`
 - `collection_name`: Tên collection (MongoDB)
 - `table`: Tên table (PostgreSQL)
-- `record_pointer`: `0` = MAX, `-1` = MIN
+- `record_pointer`: `"first"` = MIN value, `"last"` = MAX value
+- `column_to_check`: Column chứa timestamp
+
+**disk section:** *(NEW)*
+- `enable`: Bật/tắt kiểm tra file trên disk
+- `file_type`: `"json"`, `"csv"`, `"txt"`, hoặc `"mtime"` (modification time)
+- `file_path`: Đường dẫn đầy đủ đến file (có thể dùng `{symbol}` placeholder)
+- `record_pointer`: `"first"` = record đầu tiên, `"last"` = record cuối cùng
+- `column_to_check`: Column/key chứa timestamp (bỏ qua nếu `file_type="mtime"`)
 
 **symbols section:**
 - `auto_sync`: `true` = tự động lấy từ DB, `false` = dùng manual list, `null` = không cần
@@ -203,16 +237,16 @@ Cấu trúc hierarchical với 5 sections:
 - `timezone_offset`: Offset timezone (0=UTC, 7=GMT+7)
 - `allow_delay`: Độ trễ tối đa cho phép (giây)
 - `check_frequency`: Tần suất check (giây)
-- `alert_frequency`: Tần suất alert (giây)
-- `max_stale_days`: Dừng task khi data cũ quá X ngày
+- `alert_frequency`: Tần suất alert (giây) - tránh spam
+- `max_stale_days`: Dừng task khi data cũ quá X ngày (smart holiday detection)
 
 **schedule section:**
-- `days`: Array ngày (0=Mon, 6=Sun), `null` = all days
-- `hours`: Array khung giờ, `null` = 24/7
+- `valid_days`: Array ngày (0=Mon, 6=Sun), `null` = all days
+- `time_ranges`: Array khung giờ HH:MM-HH:MM, `null` = 24/7
 
 ### 3.3. Ví Dụ Cấu Hình
 
-#### API + Database
+#### 1. API + Database
 
 ```json
 {
@@ -220,7 +254,7 @@ Cấu trúc hierarchical với 5 sections:
     "api": {
       "enable": true,
       "url": "https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}",
-      "record_pointer": 0,
+      "record_pointer": "last",
       "column_to_check": "closeTime"
     },
     "database": {
@@ -228,7 +262,7 @@ Cấu trúc hierarchical với 5 sections:
       "type": "mongodb",
       "database": "crypto",
       "collection_name": "binance",
-      "record_pointer": 0,
+      "record_pointer": "last",
       "column_to_check": "timestamp"
     },
     "symbols": {
@@ -238,88 +272,262 @@ Cấu trúc hierarchical với 5 sections:
     },
     "check": {
       "timezone_offset": 0,
-      "allow_delay": 120,
+      "allow_delay": 300,
       "check_frequency": 30,
+      "alert_frequency": 300,
+      "max_stale_days": 2
+    },
+    "schedule": {
+      "valid_days": null,
+      "time_ranges": null
+    }
+  }
+}
+```
+
+#### 2. Disk JSON File (Multi-Symbol)
+
+```json
+{
+  "stock-prices": {
+    "disk": {
+      "enable": true,
+      "file_type": "json",
+      "file_path": "/data/{symbol}_prices.json",
+      "record_pointer": "last",
+      "column_to_check": "updated_at"
+    },
+    "symbols": {
+      "auto_sync": false,
+      "values": ["AAPL", "GOOGL", "MSFT"],
+      "column": null
+    },
+    "check": {
+      "timezone_offset": 7,
+      "allow_delay": 60,
+      "check_frequency": 60,
       "alert_frequency": 300,
       "max_stale_days": 1
     },
     "schedule": {
-      "days": null,
-      "hours": null
+      "valid_days": [0, 1, 2, 3, 4],
+      "time_ranges": ["09:00-11:30", "13:00-15:00"]
     }
   }
 }
 ```
 
-#### Chỉ API
+#### 3. Disk CSV File (Single File)
 
 ```json
 {
-  "gold-price": {
-    "api": {
+  "daily-report": {
+    "disk": {
       "enable": true,
-      "url": "http://api.example.com/gold",
-      "record_pointer": 0,
-      "column_to_check": "datetime"
-    },
-    "database": {
-      "enable": false
+      "file_type": "csv",
+      "file_path": "/reports/daily_report.csv",
+      "record_pointer": "last",
+      "column_to_check": "report_date"
     },
     "symbols": {
-      "auto_sync": null
+      "auto_sync": null,
+      "values": null,
+      "column": null
     },
     "check": {
-      "allow_delay": 300,
-      "check_frequency": 60,
-      "alert_frequency": 600,
-      "max_stale_days": 3
+      "timezone_offset": 7,
+      "allow_delay": 3600,
+      "check_frequency": 300,
+      "alert_frequency": 1800,
+      "max_stale_days": 1
     },
     "schedule": {
-      "days": [0, 1, 2, 3, 4],
-      "hours": null
+      "valid_days": [0, 1, 2, 3, 4],
+      "time_ranges": ["17:00-23:59"]
     }
   }
 }
 ```
 
-#### Chỉ Database
+#### 4. Disk Text File (First Line Check)
 
 ```json
 {
-  "stock-data": {
+  "log-monitor": {
+    "disk": {
+      "enable": true,
+      "file_type": "txt",
+      "file_path": "/logs/app.log",
+      "record_pointer": "first",
+      "column_to_check": null
+    },
+    "symbols": {
+      "auto_sync": null,
+      "values": null,
+      "column": null
+    },
+    "check": {
+      "timezone_offset": 7,
+      "allow_delay": 120,
+      "check_frequency": 10,
+      "alert_frequency": 60,
+      "max_stale_days": 1
+    },
+    "schedule": {
+      "valid_days": null,
+      "time_ranges": null
+    }
+  }
+}
+```
+
+#### 5. Disk File Modification Time
+
+```json
+{
+  "backup-check": {
+    "disk": {
+      "enable": true,
+      "file_type": "mtime",
+      "file_path": "/backups/db_backup_{symbol}.sql",
+      "record_pointer": null,
+      "column_to_check": null
+    },
+    "symbols": {
+      "auto_sync": false,
+      "values": ["prod", "staging", "dev"],
+      "column": null
+    },
+    "check": {
+      "timezone_offset": 7,
+      "allow_delay": 7200,
+      "check_frequency": 600,
+      "alert_frequency": 3600,
+      "max_stale_days": 1
+    },
+    "schedule": {
+      "valid_days": null,
+      "time_ranges": ["08:00-20:00"]
+    }
+  }
+}
+```
+
+#### 6. Mixed: API + Database + Disk
+
+```json
+{
+  "full-stack": {
     "api": {
-      "enable": false
+      "enable": true,
+      "url": "https://api.example.com/data?id={symbol}",
+      "record_pointer": "last",
+      "column_to_check": "timestamp"
     },
     "database": {
       "enable": true,
       "type": "postgresql",
-      "database": "stocks",
-      "table": "prices",
-      "record_pointer": 0,
-      "column_to_check": "datetime"
+      "database": "production",
+      "table": "events",
+      "record_pointer": "last",
+      "column_to_check": "created_at"
+    },
+    "disk": {
+      "enable": true,
+      "file_type": "json",
+      "file_path": "/cache/{symbol}_cache.json",
+      "record_pointer": "last",
+      "column_to_check": "cached_at"
     },
     "symbols": {
-      "auto_sync": false,
-      "values": ["VNM", "VIC", "VHM"],
-      "column": "symbol"
+      "auto_sync": true,
+      "values": null,
+      "column": "event_id"
     },
     "check": {
-      "allow_delay": 3600,
-      "check_frequency": 300,
-      "alert_frequency": 1800,
-      "max_stale_days": 7
+      "timezone_offset": 7,
+      "allow_delay": 180,
+      "check_frequency": 30,
+      "alert_frequency": 300,
+      "max_stale_days": 2
     },
     "schedule": {
-      "days": [0, 1, 2, 3, 4],
-      "hours": ["9:00-11:30", "13:00-15:00"]
+      "valid_days": [0, 1, 2, 3, 4],
+      "time_ranges": ["08:00-12:00", "13:00-17:00"]
     }
   }
+}
 }
 ```
 
 ---
 
 ## 4. CHẠY HỆ THỐNG
+
+### Linux/Mac (run.sh)
+
+#### Khởi động
+```bash
+./run.sh start
+```
+
+#### Kiểm tra trạng thái
+```bash
+./run.sh status
+```
+
+#### Xem logs (Interactive Menu)
+```bash
+./run.sh logs
+# Chọn:
+# 1) main.log
+# 2) api.log
+# 3) database.log
+# 4) disk.log
+```
+
+#### Dừng
+```bash
+./run.sh stop
+```
+
+### Windows (run.ps1)
+
+#### Khởi động (Background)
+```powershell
+.\run.ps1 start
+```
+
+#### Kiểm tra trạng thái
+```powershell
+.\run.ps1 status
+```
+
+#### Xem logs (Interactive Menu)
+```powershell
+.\run.ps1 logs
+# Chọn:
+# 1) main.log
+# 2) api.log
+# 3) database.log
+# 4) disk.log
+```
+
+#### Dừng
+```powershell
+.\run.ps1 stop
+```
+
+### Chạy trực tiếp Python (Development)
+
+```bash
+# Linux/Mac
+source .venv/bin/activate
+python src/main.py
+
+# Windows
+.venv\Scripts\activate
+python src\main.py
 
 ### Development
 
@@ -330,51 +538,24 @@ python src/main.py
 
 ### Production (Windows)
 
-```powershell
-# Background
-Start-Process python -ArgumentList "src/main.py" -WindowStyle Hidden
-```
-
-### Production (Linux)
-
-```bash
-# Systemd service
-sudo nano /etc/systemd/system/data-monitor.service
-```
-
-```ini
-[Unit]
-Description=Data Monitoring System
-After=network.target
-
-[Service]
-Type=simple
-User=your_user
-WorkingDirectory=/path/to/check_data_project
-ExecStart=/path/to/.venv/bin/python src/main.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-# Enable và start
-sudo systemctl enable data-monitor
-sudo systemctl start data-monitor
-sudo systemctl status data-monitor
 ```
 
 ### Xem Logs
 
+#### Linux/Mac
 ```bash
 # Real-time
 tail -f logs/api.log
 tail -f logs/database.log
 tail -f logs/disk.log
+tail -f logs/main.log
+```
 
-# PowerShell
-Get-Content logs/api.log -Wait
+#### Windows PowerShell
+```powershell
+Get-Content logs\api.log -Wait -Tail 50
+Get-Content logs\database.log -Wait -Tail 50
+Get-Content logs\disk.log -Wait -Tail 50
 ```
 
 ---
@@ -384,61 +565,121 @@ Get-Content logs/api.log -Wait
 ### 5.1. Tổng Quan
 
 ```
-main.py
+main.py (async orchestrator)
+  │
   ├── CheckAPI (API monitoring)
+  │     └── aiohttp sessions
+  │
   ├── CheckDatabase (Database monitoring)
-  └── CheckDisk (File monitoring)
+  │     └── DatabaseManager → MongoDB/PostgreSQL
+  │
+  └── CheckDisk (Disk/File monitoring)
+        └── File readers: JSON/CSV/TXT/mtime
+              │
+              ├── DataValidator (freshness check logic)
+              ├── TimeValidator (schedule validation)
+              │
+              ├── DatabaseManager (Factory pattern)
+              │      ├── MongoDBConnector
+              │      ├── PostgreSQLConnector
+              │      └── MySQLConnector (extensible)
+              │
+              └── PlatformManager (Factory pattern)
+                     ├── DiscordNotifier
+                     ├── TelegramNotifier
+                     └── SlackNotifier (extensible)
+```
+
+### 5.2. Data Flow
+
+```
+┌─────────────────┐
+│  Config Loader  │  (auto-reload every 10s)
+└────────┬────────┘
          │
-         ├── DatabaseManager (Factory pattern)
-         │      ├── MongoDBConnector
-         │      ├── PostgreSQLConnector
-         │      └── MySQLConnector (dễ thêm)
-         │
-         └── PlatformManager (Factory pattern)
-                ├── DiscordNotifier
-                ├── TelegramNotifier
-                └── SlackNotifier (dễ thêm)
+         ├────────────────┬────────────────┬──────────────────┐
+         ▼                ▼                ▼                  ▼
+   ┌─────────┐      ┌──────────┐     ┌──────────┐     ┌──────────┐
+   │ CheckAPI│      │CheckDB   │     │CheckDisk │     │TimeValid │
+   └────┬────┘      └─────┬────┘     └─────┬────┘     └─────┬────┘
+        │                 │                │                │
+        │ HTTP GET        │ SQL Query      │ File Read      │ Schedule?
+        ▼                 ▼                ▼                ▼
+   ┌─────────────────────────────────────────────────────────┐
+   │              DataValidator                               │
+   │  ├─ Parse datetime                                       │
+   │  ├─ Calculate delay                                      │
+   │  ├─ Check stale_count                                    │
+   │  └─ Holiday detection                                    │
+   └──────────────────────┬──────────────────────────────────┘
+                          │ is_stale?
+                          ▼
+                   ┌──────────────┐
+                   │PlatformMgr   │
+                   │send_alert()  │
+                   └──────┬───────┘
+                          │
+                   ┌──────┴───────┐
+                   ▼              ▼
+            ┌──────────┐   ┌───────────┐
+            │ Discord  │   │ Telegram  │
+            └──────────┘   └───────────┘
 ```
 
-### 5.2. Module Database Config
+### 5.3. Database Manager (Factory Pattern)
 
-**Factory Pattern + Abstract Base Class**
-
-```
-BaseDatabaseConnector (ABC)
-  ├── connect()
-  ├── query()
-  ├── close()
-  └── get_required_package()
-
-MongoDBConnector(BaseDatabaseConnector)
-  ├── connect() - pymongo.MongoClient
-  ├── query() - find().sort().limit() với projection
-  └── close()
-
-PostgreSQLConnector(BaseDatabaseConnector)
-  ├── connect() - psycopg2.connect
-  ├── query() - SELECT MAX/MIN (không dùng ORDER BY)
-  └── close()
-
-DatabaseManager (Factory)
-  ├── CONNECTOR_REGISTRY = {type: class}
-  ├── _create_connector() - Factory method
-  ├── connect() - Connection pooling
-  └── query() - Unified interface
-```
-
-**Sử dụng:**
+**Abstract Base Class:**
 
 ```python
-from configs.database_config import DatabaseManager
-
-manager = DatabaseManager()
-latest_time = manager.query("db_name", config, symbol="BTC")
-manager.close("db_name")
+class BaseDatabaseConnector(ABC):
+    @abstractmethod
+    def connect(self): pass
+    
+    @abstractmethod
+    def query(self, config, symbol=None): pass
+    
+    @abstractmethod
+    def close(self): pass
+    
+    @abstractmethod
+    def get_required_package(self) -> str: pass
 ```
 
-### 5.3. Module Platform Util
+**Concrete Implementations:**
+
+```python
+MongoDBConnector(BaseDatabaseConnector)
+  ├── connect() → pymongo.MongoClient
+  ├── query() → collection.find().sort().limit(1)
+  │            with projection for optimization
+  └── close() → client.close()
+
+PostgreSQLConnector(BaseDatabaseConnector)
+  ├── connect() → psycopg2.connect
+  ├── query() → SELECT MAX(col) / MIN(col)
+  │            (no ORDER BY for performance)
+  └── close() → connection.close()
+```
+
+**Factory:**
+
+```python
+class DatabaseManager:
+    CONNECTOR_REGISTRY = {
+        "mongodb": MongoDBConnector,
+        "postgresql": PostgreSQLConnector
+    }
+    
+    def _create_connector(self, db_type):
+        return self.CONNECTOR_REGISTRY[db_type](config)
+    
+    def query(self, db_name, config, symbol=None):
+        # Connection pooling + unified interface
+        connector = self._get_or_create(db_name, config)
+        return connector.query(config, symbol)
+```
+
+### 5.4. Platform Manager (Factory Pattern)
 
 **Factory Pattern + Multi-Platform Support**
 
@@ -457,74 +698,466 @@ TelegramNotifier(BasePlatformNotifier)
   ├── send_alert() - Bot API với Markdown
   └── validate_config()
 
-PlatformManager (Factory)
-  ├── NOTIFIER_REGISTRY = {name: class}
-  ├── _create_notifier() - Factory method
-  ├── send_alert() - Gửi đến TẤT CẢ primary platforms
-  └── send_to_specific_platform()
-```
-
-**Sử dụng:**
+**Abstract Base Class:**
 
 ```python
-from utils.platform_util import PlatformManager
-
-manager = PlatformManager()
-manager.send_alert(
-    api_name="BTC-API",
-    symbol="BTC",
-    overdue_seconds=300,
-    allow_delay=120,
-    check_frequency=60,
-    alert_frequency=300
-)
+class BasePlatform(ABC):
+    @abstractmethod
+    def send_message(self, message: str) -> bool: pass
+    
+    @abstractmethod
+    def format_alert(self, **kwargs) -> str: pass
 ```
 
-### 5.4. Luồng Hoạt Động
+**Concrete Implementations:**
 
-#### Check API
+```python
+DiscordNotifier(BasePlatform)
+  ├── send_message() → webhook POST
+  └── format_alert() → Discord embed format
 
-```
-1. Load config (mỗi 10s)
-2. Resolve symbols (cache 24h)
-3. Tạo/hủy tasks động
-4. Mỗi task:
-   - Check schedule
-   - GET request API
-   - Parse JSON
-   - Validate timestamp
-   - Check max_stale_days → Exit nếu quá cũ
-   - Detect holiday
-   - Send alert nếu cần
-   - Sleep check_frequency
+TelegramNotifier(BasePlatform)
+  ├── send_message() → Bot API sendMessage
+  └── format_alert() → Markdown format
 ```
 
-#### Check Database
+**Factory:**
+
+```python
+class PlatformManager:
+    NOTIFIER_REGISTRY = {
+        "discord": DiscordNotifier,
+        "telegram": TelegramNotifier
+    }
+    
+    def send_alert(self, api_name, symbol, overdue_seconds, 
+                   allow_delay, check_frequency, alert_frequency):
+        # Send to ALL primary platforms
+        for platform in self.notifiers.values():
+            if platform.is_primary:
+                platform.send_message(message)
+```
+
+### 5.5. Disk File Reading Logic
+
+```python
+def _read_datetime_from_file(self, file_path, file_type, 
+                              record_pointer, column_to_check):
+    if file_type == "mtime":
+        # File modification time
+        mtime = os.path.getmtime(file_path)
+        return datetime.fromtimestamp(mtime)
+    
+    elif file_type == "json":
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            # data can be dict or list
+            if isinstance(data, list):
+                record = data[0 if record_pointer == "first" else -1]
+            else:
+                record = data
+            return parse_datetime(record[column_to_check])
+    
+    elif file_type == "csv":
+        with open(file_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            record = rows[0 if record_pointer == "first" else -1]
+            return parse_datetime(record[column_to_check])
+    
+    elif file_type == "txt":
+        with open(file_path, 'r') as f:
+            lines = [line.strip() for line in f if line.strip()]
+            line = lines[0 if record_pointer == "first" else -1]
+            return parse_datetime(line)
+```
+
+### 5.6. Flow Diagram
+
+#### Check API Flow
 
 ```
-1. Load config (mỗi 10s)
-2. Resolve symbols (cache 24h)
-3. Tạo/hủy tasks động
-4. Mỗi task:
-   - Check schedule
-   - Query database (MAX/MIN hoặc find+sort)
-   - Validate timestamp
-   - Check max_stale_days → Exit nếu quá cũ
-   - Detect holiday
-   - Send alert nếu cần
-   - Sleep check_frequency
+1. Load config (auto-reload every 10s)
+2. Resolve symbols (cached 24h)
+3. Create/destroy tasks dynamically
+4. Each task loop:
+   ├─ TimeValidator.is_within_schedule()?
+   │   └─ No → sleep check_frequency → continue
+   ├─ HTTP GET {url}
+   ├─ Parse JSON → extract datetime
+   ├─ DataValidator.is_stale()?
+   │   ├─ stale_count > max_stale_days?
+   │   │   └─ Yes → logger.info + break (exit task)
+   │   ├─ Holiday detection (pattern analysis)
+   │   └─ should_send_alert()?
+   │        └─ Yes → PlatformManager.send_alert()
+   └─ sleep(check_frequency)
 ```
 
-#### Holiday Detection
+#### Check Database Flow
 
 ```
-1. Track first_stale_times
-2. Đếm số items stale
-3. Check: latest_data_date == current_date?
-4. Nếu NO + stale_count >= 50%:
-   → Nghi ngờ ngày lễ
-5. Gửi alert với emoji 🟡
+1. Load config (auto-reload every 10s)
+2. Resolve symbols (cached 24h)
+3. DatabaseManager.connect() → pooling
+4. Each task loop:
+   ├─ TimeValidator.is_within_schedule()?
+   ├─ DatabaseManager.query()
+   │   ├─ MongoDB: find().sort().limit(1) with projection
+   │   └─ PostgreSQL: SELECT MAX/MIN (optimized)
+   ├─ DataValidator.is_stale()?
+   │   ├─ stale_count check
+   │   ├─ Holiday detection
+   │   └─ Alert throttling (alert_frequency)
+   └─ sleep(check_frequency)
 ```
+
+#### Check Disk Flow
+
+```
+1. Load config (auto-reload every 10s)
+2. Resolve symbols OR single file
+3. Each task loop:
+   ├─ TimeValidator.is_within_schedule()?
+   ├─ _read_datetime_from_file()
+   │   ├─ mtime: os.path.getmtime()
+   │   ├─ json: json.load() → first/last record
+   │   ├─ csv: csv.DictReader() → first/last row
+   │   └─ txt: readlines() → first/last line
+   ├─ Parse datetime string
+   ├─ DataValidator.is_stale()?
+   │   ├─ stale_count check
+   │   ├─ Holiday detection
+   │   └─ Alert throttling
+   └─ sleep(check_frequency)
+```
+
+---
+
+## 6. MỞ RỘNG
+
+### 6.1. Thêm Database Mới (MySQL)
+
+**Bước 1:** Tạo connector class
+
+```python
+# configs/database_config.py
+class MySQLConnector(BaseDatabaseConnector):
+    def connect(self):
+        import mysql.connector
+        return mysql.connector.connect(**self.config)
+    
+    def query(self, config, symbol=None):
+        # Similar to PostgreSQL logic
+        pass
+    
+    def get_required_package(self) -> str:
+        return "mysql-connector-python"
+```
+
+**Bước 2:** Đăng ký vào registry
+
+```python
+class DatabaseManager:
+    CONNECTOR_REGISTRY = {
+        "mongodb": MongoDBConnector,
+        "postgresql": PostgreSQLConnector,
+        "mysql": MySQLConnector  # Add this
+    }
+```
+
+**Bước 3:** Cập nhật config
+
+```json
+{
+  "database": {
+    "enable": true,
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "mydb"
+  }
+}
+```
+
+### 6.2. Thêm Platform Mới (Slack)
+
+**Bước 1:** Tạo notifier class
+
+```python
+# utils/platform_util/slack_util.py
+from .base_platform import BasePlatform
+
+class SlackNotifier(BasePlatform):
+    def __init__(self, webhook_url, is_primary=False):
+        super().__init__(is_primary)
+        self.webhook_url = webhook_url
+    
+    def send_message(self, message: str) -> bool:
+        payload = {"text": message}
+        response = requests.post(self.webhook_url, json=payload)
+        return response.status_code == 200
+    
+    def format_alert(self, api_name, symbol, overdue_seconds, 
+                     allow_delay, **kwargs):
+        return f":warning: *{api_name}* - {symbol} is {overdue_seconds}s late"
+```
+
+**Bước 2:** Đăng ký vào registry
+
+```python
+# utils/platform_util/platform_manager.py
+from .slack_util import SlackNotifier
+
+class PlatformManager:
+    NOTIFIER_REGISTRY = {
+        "discord": DiscordNotifier,
+        "telegram": TelegramNotifier,
+        "slack": SlackNotifier  # Add this
+    }
+```
+
+**Bước 3:** Cập nhật config
+
+```json
+{
+  "PLATFORM_CONFIG": {
+    "slack": {
+      "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
+      "is_primary": true
+    }
+  }
+}
+```
+
+### 6.3. Thêm File Format Mới (XML)
+
+Trong `src/check_disk/check_disk.py`, thêm logic vào `_read_datetime_from_file()`:
+
+```python
+def _read_datetime_from_file(self, ...):
+    # ... existing code ...
+    
+    elif file_type == "xml":
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        
+        # Assuming XML structure: <root><record><datetime>...</datetime></record></root>
+        records = root.findall('.//record')
+        record = records[0 if record_pointer == "first" else -1]
+        datetime_str = record.find(column_to_check).text
+        return ConvertDatetimeUtil.convert_to_timezone(datetime_str, 0)
+```
+
+---
+
+## 7. TROUBLESHOOTING
+
+### Lỗi: "No module named 'pymongo'"
+
+**Nguyên nhân:** Thiếu package database
+
+**Giải pháp:**
+```bash
+pip install pymongo  # MongoDB
+pip install psycopg2-binary  # PostgreSQL
+```
+
+### Lỗi: "Connection refused"
+
+**Nguyên nhân:** Database không chạy hoặc sai config
+
+**Giải pháp:**
+```bash
+# Check MongoDB
+sudo systemctl status mongodb
+
+# Check PostgreSQL
+sudo systemctl status postgresql
+
+# Test connection
+mongo --host localhost --port 27017
+psql -h localhost -U postgres
+```
+
+### Alert không gửi
+
+**Kiểm tra:**
+1. Check logs: `tail -f logs/main.log`
+2. Test webhook:
+   ```bash
+   curl -X POST "YOUR_DISCORD_WEBHOOK" \
+     -H "Content-Type: application/json" \
+     -d '{"content": "Test message"}'
+   ```
+3. Check `alert_frequency` - có thể đang bị throttle
+4. Check `schedule` - có thể ngoài giờ hoạt động
+
+### Data cũ nhưng không alert
+
+**Kiểm tra:**
+1. `allow_delay`: Có thể set quá cao
+2. `max_stale_days`: Task có thể đã tự dừng
+3. Logs: Xem có "Holiday suspected" không
+4. Timezone: Check `timezone_offset` đúng chưa
+
+### Task tự dừng
+
+**Nguyên nhân:** Data cũ quá `max_stale_days`
+
+**Log sẽ có:**
+```
+[INFO] BTC: Data has been stale for 4 days (max: 3). Stopping task.
+```
+
+**Giải pháp:**
+- Tăng `max_stale_days`
+- Hoặc fix data source
+- Restart: `./run.sh restart`
+
+### Windows: run.ps1 báo lỗi encoding
+
+**Giải pháp:**
+```powershell
+# Set UTF-8 encoding
+chcp 65001
+
+# Hoặc trong script
+$OutputEncoding = [System.Text.Encoding]::UTF8
+```
+
+### Linux: Permission denied
+
+**Giải pháp:**
+```bash
+chmod +x run.sh
+chmod +x src/main.py
+```
+
+---
+
+## 8. LOGGING
+
+### Log Files
+
+```
+logs/
+├── main.log       # Orchestrator logs
+├── api.log        # API check logs
+├── database.log   # Database check logs
+└── disk.log       # Disk check logs
+```
+
+### Log Rotation
+
+- **maxBytes:** 10MB per file
+- **backupCount:** 4 (total 5 files)
+- **Format:** `%(asctime)s - %(name)s - %(levelname)s - %(message)s`
+
+### Log Levels
+
+- **INFO:** Normal operations
+- **WARNING:** Stale data, holidays
+- **ERROR:** Connection failures, exceptions
+- **DEBUG:** Detailed troubleshooting (enable in `logging_config.py`)
+
+---
+
+## 9. BEST PRACTICES
+
+### Config Management
+
+✅ **DO:**
+- Separate configs by environment (dev/prod)
+- Use environment variables for sensitive data
+- Enable only needed monitors (`enable: false` for unused)
+- Set reasonable `check_frequency` (avoid DDoS)
+
+❌ **DON'T:**
+- Commit secrets to git
+- Set `check_frequency` < 5s
+- Use same webhook for dev/prod
+
+### Performance Optimization
+
+✅ **DO:**
+- Enable `auto_sync: true` for symbol caching
+- Use `record_pointer: "last"` for latest data
+- Set appropriate `alert_frequency` (avoid spam)
+- Use projection in MongoDB queries
+
+❌ **DON'T:**
+- Query full collections without limits
+- Set `max_stale_days` too low
+- Run too many concurrent tasks
+
+### Alert Management
+
+✅ **DO:**
+- Set `is_primary: true` for main platform
+- Use `alert_frequency` >= 60s
+- Test webhooks before production
+- Monitor logs regularly
+
+❌ **DON'T:**
+- Send alerts to public channels
+- Ignore "Holiday suspected" warnings
+- Set `allow_delay` too low
+
+---
+
+## 10. FAQ
+
+**Q: Có thể monitor nhiều nguồn trong 1 config?**
+
+A: Có! Set `enable: true` cho api, database, disk cùng lúc.
+
+**Q: Schedule hoạt động thế nào?**
+
+A: `valid_days` (0=Mon, 6=Sun), `time_ranges` (HH:MM-HH:MM). `null` = always on.
+
+**Q: Làm sao biết data cũ do lỗi hay do ngày lễ?**
+
+A: Xem emoji:
+- 🔴 Data stale (error)
+- 🟡 Holiday suspected (warning)
+
+**Q: alert_frequency khác check_frequency thế nào?**
+
+A:
+- `check_frequency`: Tần suất CHECK data
+- `alert_frequency`: Tần suất GỬI alert (tránh spam)
+
+**Q: File type "txt" đọc thế nào?**
+
+A: Đọc dòng đầu/cuối, parse thành datetime. Format phải là ISO8601 hoặc timestamp.
+
+**Q: record_pointer "first" vs "last"?**
+
+A:
+- `"first"`: Record đầu tiên (oldest)
+- `"last"`: Record cuối cùng (latest)
+
+**Q: Có thể dùng placeholder {symbol} ở đâu?**
+
+A: `api.url`, `disk.file_path`
+
+---
+
+## 11. LICENSE
+
+MIT License
+
+---
+
+## 12. CREDITS
+
+**Author:** adee0210
+
+**Contributors:** Welcome! PRs appreciated.
+
+**Repository:** https://github.com/adee0210/check-data-project
 
 ---
 

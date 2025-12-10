@@ -173,7 +173,7 @@ class CheckAPI:
                         should_send_alert = True
 
                 if should_send_alert:
-                    self.platform_util.send_alert_message(
+                    self.platform_util.send_alert(
                         api_name=api_name,
                         symbol=symbol,
                         overdue_seconds=0,
@@ -271,13 +271,24 @@ class CheckAPI:
 
                 should_send_alert = False
                 if last_alert is None:
-                    # Lần đầu tiên lỗi (sau grace period) → gửi ngay
+                    # Lần đầu tiên lỗi → gửi ngay
                     should_send_alert = True
+                    self.logger_api.info(
+                        f"Lần đầu phát hiện lỗi cho {display_name}, gửi alert ngay"
+                    )
                 else:
                     # Kiểm tra đã qua alert_frequency chưa
                     time_since_last_alert = (current_time - last_alert).total_seconds()
                     if time_since_last_alert >= alert_frequency:
                         should_send_alert = True
+                        self.logger_api.info(
+                            f"Đã qua {int(time_since_last_alert)}s kể từ alert cuối cho {display_name}, gửi alert tiếp"
+                        )
+                    else:
+                        remaining = alert_frequency - time_since_last_alert
+                        self.logger_api.debug(
+                            f"Chưa đủ alert_frequency cho {display_name}, còn {int(remaining)}s"
+                        )
 
                 if should_send_alert:
                     # Tạo message với ngữ cảnh
@@ -290,7 +301,7 @@ class CheckAPI:
                         context_message = "Dữ liệu quá hạn"
 
                     # Gửi cảnh báo lên platform
-                    self.platform_util.send_alert_message(
+                    self.platform_util.send_alert(
                         api_name=api_name,
                         symbol=symbol,
                         overdue_seconds=overdue_seconds,

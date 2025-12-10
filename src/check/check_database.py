@@ -21,17 +21,13 @@ class CheckDatabase:
         self.task_manager_db = TaskManager()
         self.platform_util = PlatformManager()
 
-        # Tracking alert frequency: {display_name: last_alert_time}
         self.last_alert_times = {}
 
-        # Smart holiday detection
         self.first_stale_times = {}
         self.suspected_holidays = {}
 
-        # Tracking outside schedule status: {display_name: is_outside}
         self.outside_schedule_logged = {}
 
-        # Database connector
         self.db_connector = DatabaseManager()
 
         # Symbols cache ở class level để persist qua các reload
@@ -152,7 +148,7 @@ class CheckDatabase:
                         should_send_alert = True
 
                 if should_send_alert:
-                    self.platform_util.send_alert_message(
+                    self.platform_util.send_alert(
                         api_name=db_name,
                         symbol=symbol,
                         overdue_seconds=0,
@@ -261,7 +257,7 @@ class CheckDatabase:
                         context_message = "Dữ liệu database quá hạn"
                         alert_level = "warning"
 
-                    self.platform_util.send_alert_message(
+                    self.platform_util.send_alert(
                         api_name=db_name,
                         symbol=symbol,
                         overdue_seconds=overdue_seconds,

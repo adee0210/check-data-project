@@ -129,11 +129,11 @@ class PlatformManager:
     def send_alert(
         self,
         api_name: str,
-        symbol: Optional[str],
-        overdue_seconds: int,
-        allow_delay: int,
-        check_frequency: int,
-        alert_frequency: int,
+        symbol: Optional[str] = None,
+        overdue_seconds: int = 0,
+        allow_delay: int = 60,
+        check_frequency: int = 10,
+        alert_frequency: int = 60,
         alert_level: str = "warning",
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
@@ -142,7 +142,15 @@ class PlatformManager:
         Gửi alert đến TẤT CẢ primary platforms
 
         Args:
-            Xem BasePlatformNotifier.send_alert() docstring
+            api_name: Tên API (vd: "gold-data", "cmc")
+            symbol: Symbol nếu có (vd: "BTC", "ETH")
+            overdue_seconds: Số giây data quá hạn
+            allow_delay: Ngưỡng cho phép delay (giây)
+            check_frequency: Tần suất check (giây)
+            alert_frequency: Tần suất gửi alert (giây)
+            alert_level: Mức độ alert ("info", "warning", "error")
+            error_message: Message mô tả lỗi
+            error_type: Loại lỗi ("API", "Database", etc.)
 
         Returns:
             Dict {platform_name: success_status}
@@ -180,39 +188,6 @@ class PlatformManager:
                 results[platform_name] = False
 
         return results
-
-    def send_alert_message(
-        self,
-        api_name: str,
-        symbol: Optional[str] = None,
-        overdue_seconds: int = 0,
-        allow_delay: int = 60,
-        check_frequency: int = 10,
-        alert_frequency: int = 60,
-        alert_level: str = "warning",
-        error_message: str = "Không có dữ liệu mới",
-        error_type: Optional[str] = None,
-    ) -> Dict[str, bool]:
-        """
-        Alias method cho send_alert() để tương thích với code cũ
-
-        Args:
-            Xem send_alert() docstring
-
-        Returns:
-            Dict {platform_name: success_status}
-        """
-        return self.send_alert(
-            api_name=api_name,
-            symbol=symbol,
-            overdue_seconds=overdue_seconds,
-            allow_delay=allow_delay,
-            check_frequency=check_frequency,
-            alert_frequency=alert_frequency,
-            alert_level=alert_level,
-            error_message=error_message,
-            error_type=error_type,
-        )
 
     def send_to_specific_platform(
         self,

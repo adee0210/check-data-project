@@ -50,8 +50,6 @@ function Start-Monitoring {
     $Process.Id | Out-File $PID_FILE
     
     Write-Host "Hệ thống đã khởi động thành công (PID: $($Process.Id))" -ForegroundColor Green
-    Write-Host "Sử dụng lệnh 'Get-Content $LOG_FILE -Wait' để xem log theo thời gian thực" -ForegroundColor Cyan
-    Write-Host "Hoặc dùng './run.ps1 logs' để xem log" -ForegroundColor Cyan
 }
 
 function Stop-Monitoring {
