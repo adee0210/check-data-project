@@ -1,19 +1,15 @@
-"""
-Discord Notifier
-
-Handles sending alerts to Discord via webhook
-"""
+"""Discord Notifier - Gửi alert qua Discord webhook"""
 
 import requests
 from typing import Dict, Any, Optional
-from .base_platform import BasePlatformNotifier
+from utils.platform_util.base_platform import BasePlatformNotifier
 
 
 class DiscordNotifier(BasePlatformNotifier):
     """
     Discord notifier implementation
 
-    Uses Discord webhook to send rich embed messages
+    Sử dụng Discord webhook để gửi rich embed messages
     """
 
     def validate_config(self) -> None:

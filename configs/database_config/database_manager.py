@@ -1,37 +1,32 @@
-"""
-Database Manager
-
-Unified interface to manage multiple database connectors
-Factory pattern for creating appropriate connector instances
-"""
+"""Database Manager - Quản lý tập trung tất cả database connections"""
 
 from typing import Any, Dict, Optional
 from datetime import datetime
 from configs.logging_config import LoggerConfig
-from .base_db import BaseDatabaseConnector
-from .mongo_config import MongoDBConnector
-from .postgres_config import PostgreSQLConnector
+from configs.database_config.base_db import BaseDatabaseConnector
+from configs.database_config.mongo_config import MongoDBConnector
+from configs.database_config.postgres_config import PostgreSQLConnector
 
 
 class DatabaseManager:
     """
     Database Manager - Quản lý tất cả database connections
 
-    Features:
-    - Connection pooling (reuse connections)
-    - Auto-reload config from common_config.json
-    - Factory pattern for creating connectors
-    - Easy to extend with new database types
+    Tính năng:
+    - Connection pooling (tái sử dụng connections)
+    - Tự động reload config từ common_config.json
+    - Factory pattern để tạo connectors
+    - Dễ dàng mở rộng với database types mới
 
-    Usage:
+    Sử dụng:
         manager = DatabaseManager()
 
         # Query database
         latest_time = manager.query("db_name", db_config, symbol="BTC")
 
-        # Close connections
-        manager.close("db_name")  # Close specific
-        manager.close()  # Close all
+        # Đóng connections
+        manager.close("db_name")  # Đóng 1 database cụ thể
+        manager.close()  # Đóng tất cả
     """
 
     CONNECTOR_REGISTRY = {

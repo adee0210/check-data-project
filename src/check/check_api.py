@@ -1,5 +1,3 @@
-"""Module kiểm tra API endpoints"""
-
 import asyncio
 from datetime import datetime
 
@@ -11,7 +9,7 @@ from logic_check.data_validator import DataValidator
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
-from utils.platform_util import PlatformManager
+from utils.platform_util.platform_manager import PlatformManager
 from utils.symbol_resolver_util import SymbolResolverUtil
 
 

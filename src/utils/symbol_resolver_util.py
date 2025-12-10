@@ -1,11 +1,7 @@
-"""
-Utility để tự động resolve symbols từ database khi API config có symbols: null
-"""
-
 import os
 import json
 from datetime import datetime, timedelta
-from configs.database_config import DatabaseManager
+from configs.database_config.database_manager import DatabaseManager
 from utils.load_config_util import LoadConfigUtil
 from configs.logging_config import LoggerConfig
 

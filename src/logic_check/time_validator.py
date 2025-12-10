@@ -1,5 +1,3 @@
-"""Module xử lý logic kiểm tra lịch trình"""
-
 from datetime import datetime
 
 

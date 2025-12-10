@@ -1,5 +1,3 @@
-"""Module kiểm tra file/folder modification time"""
-
 import asyncio
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +8,7 @@ from logic_check.data_validator import DataValidator
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
-from utils.platform_util import PlatformManager
+from utils.platform_util.platform_manager import PlatformManager
 
 
 class CheckDisk:

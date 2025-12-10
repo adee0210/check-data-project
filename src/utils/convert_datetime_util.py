@@ -1,5 +1,3 @@
-"""Utilities chuyển đổi datetime"""
-
 import datetime
 
 

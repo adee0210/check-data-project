@@ -1,8 +1,4 @@
-"""
-Base Database Connector Interface
-
-Abstract base class for all database connectors
-"""
+"""Base Database Connector - Interface chung cho tất cả database connectors"""
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional

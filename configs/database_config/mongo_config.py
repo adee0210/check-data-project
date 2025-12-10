@@ -1,21 +1,17 @@
-"""
-MongoDB Connector
-
-Handles MongoDB connections and queries
-"""
+"""MongoDB Connector - Kết nối và query MongoDB"""
 
 from typing import Any, Dict, Optional
 from datetime import datetime
-from .base_db import BaseDatabaseConnector
+from configs.database_config.base_db import BaseDatabaseConnector
 
 
 class MongoDBConnector(BaseDatabaseConnector):
     """
     MongoDB connector implementation
 
-    Supports:
+    Hỗ trợ:
     - Connection pooling
-    - Optimized queries with projection
+    - Query tối ưu với projection
     - Authentication
     """
 
@@ -75,7 +71,6 @@ class MongoDBConnector(BaseDatabaseConnector):
             self.db.list_collection_names()
 
             self.connection = self.db
-            self.logger.info(f"Kết nối MongoDB thành công: {database}")
             return self.db
 
         except Exception as e:
@@ -148,6 +143,17 @@ class MongoDBConnector(BaseDatabaseConnector):
                 # Convert to datetime if needed
                 if isinstance(latest_time, datetime):
                     return latest_time
+                elif isinstance(latest_time, str):
+                    # Xử lý string datetime
+                    from utils.convert_datetime_util import ConvertDatetimeUtil
+
+                    converted = ConvertDatetimeUtil.convert_str_to_datetime(latest_time)
+                    if converted:
+                        return converted
+                    else:
+                        raise ValueError(
+                            f"Không thể parse string datetime: {latest_time}"
+                        )
                 elif isinstance(latest_time, (int, float)):
                     return datetime.fromtimestamp(latest_time)
                 else:

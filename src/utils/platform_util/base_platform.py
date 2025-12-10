@@ -1,8 +1,4 @@
-"""
-Base Platform Notifier Interface
-
-Abstract base class for all platform notifiers
-"""
+"""Base Platform Notifier - Interface chung cho tất cả platform notifiers"""
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional

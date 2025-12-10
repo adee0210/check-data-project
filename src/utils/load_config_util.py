@@ -1,5 +1,3 @@
-"""Utility load config từ file JSON"""
-
 import glob
 import json
 import os

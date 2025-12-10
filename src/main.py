@@ -1,5 +1,3 @@
-"""Entry point chính của hệ thống giám sát dữ liệu"""
-
 import sys
 from pathlib import Path
 

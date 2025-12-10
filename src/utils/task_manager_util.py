@@ -1,5 +1,3 @@
-"""Manager quản lý async tasks"""
-
 import asyncio
 
 

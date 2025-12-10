@@ -1,5 +1,3 @@
-"""Cấu hình logging cho hệ thống"""
-
 import logging
 import os
 import sys

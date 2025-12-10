@@ -1,22 +1,18 @@
-"""
-PostgreSQL Connector
-
-Handles PostgreSQL connections and queries
-"""
+"""PostgreSQL Connector - Kết nối và query PostgreSQL"""
 
 from typing import Any, Dict, Optional
 from datetime import datetime
-from .base_db import BaseDatabaseConnector
+from configs.database_config.base_db import BaseDatabaseConnector
 
 
 class PostgreSQLConnector(BaseDatabaseConnector):
     """
     PostgreSQL connector implementation
 
-    Supports:
+    Hỗ trợ:
     - Connection pooling
-    - Optimized queries with MAX/MIN aggregations
-    - Parameterized queries (SQL injection prevention)
+    - Query tối ưu với MAX/MIN aggregations
+    - Parameterized queries (ngăn chặn SQL injection)
     """
 
     def __init__(self, logger):
@@ -66,7 +62,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                 password=password,
             )
 
-            self.logger.info(f"Kết nối PostgreSQL thành công: {database}")
             return self.connection
 
         except Exception as e:
@@ -135,6 +130,19 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                     # Convert to datetime if needed
                     if isinstance(latest_time, datetime):
                         return latest_time
+                    elif isinstance(latest_time, str):
+                        # Xử lý string datetime
+                        from utils.convert_datetime_util import ConvertDatetimeUtil
+
+                        converted = ConvertDatetimeUtil.convert_str_to_datetime(
+                            latest_time
+                        )
+                        if converted:
+                            return converted
+                        else:
+                            raise ValueError(
+                                f"Không thể parse string datetime: {latest_time}"
+                            )
                     elif isinstance(latest_time, (int, float)):
                         return datetime.fromtimestamp(latest_time)
                     else:

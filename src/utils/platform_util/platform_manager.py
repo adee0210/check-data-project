@@ -1,47 +1,39 @@
-"""
-Platform Manager
-
-Unified interface to manage multiple platform notifiers
-Factory pattern for creating appropriate notifier instances
-"""
+"""Platform Manager - Quản lý tập trung tất cả platform notifiers"""
 
 from typing import Dict, Any, Optional, List
 from configs.logging_config import LoggerConfig
-from .base_platform import BasePlatformNotifier
-from .discord_util import DiscordNotifier
-from .telegram_util import TelegramNotifier
+from utils.platform_util.base_platform import BasePlatformNotifier
+from utils.platform_util.discord_util import DiscordNotifier
+from utils.platform_util.telegram_util import TelegramNotifier
 
 
 class PlatformManager:
     """
     Platform Manager - Quản lý tất cả platform notifiers
 
-    Features:
-    - Auto-reload config from common_config.json
-    - Factory pattern for creating notifiers
-    - Support multiple primary platforms
-    - Easy to extend with new platforms
+    Tính năng:
+    - Tự động reload config từ common_config.json
+    - Factory pattern để tạo notifiers
+    - Hỗ trợ nhiều primary platforms
+    - Dễ dàng mở rộng với platforms mới
 
-    Usage:
+    Sử dụng:
         manager = PlatformManager()
 
-        # Send alert
+        # Gửi alert
         manager.send_alert("api_name", "BTC", ...)
 
-        # Send to specific platform
+        # Gửi đến platform cụ thể
         manager.send_to_discord("message")
         manager.send_to_telegram("message")
     """
 
-    # Registry of supported platforms
-    # Dễ dàng mở rộng: thêm Slack, Email, SMS, etc.
+    # Registry của các platforms hỗ trợ
     NOTIFIER_REGISTRY = {
         "discord": DiscordNotifier,
         "telegram": TelegramNotifier,
-        # Dễ dàng thêm: "slack": SlackNotifier,
         # "email": EmailNotifier,
         # "sms": SMSNotifier,
-        # "webhook": WebhookNotifier,
     }
 
     def __init__(self):

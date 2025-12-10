@@ -1,19 +1,15 @@
-"""
-Telegram Notifier
-
-Handles sending alerts to Telegram via Bot API
-"""
+"""Telegram Notifier - Gửi alert qua Telegram Bot API"""
 
 import requests
 from typing import Dict, Any, Optional
-from .base_platform import BasePlatformNotifier
+from utils.platform_util.base_platform import BasePlatformNotifier
 
 
 class TelegramNotifier(BasePlatformNotifier):
     """
     Telegram notifier implementation
 
-    Uses Telegram Bot API to send messages
+    Sử dụng Telegram Bot API để gửi messages
     """
 
     def validate_config(self) -> None:

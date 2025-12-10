@@ -1,5 +1,3 @@
-"""Module kiểm tra database freshness"""
-
 import asyncio
 from datetime import datetime
 
@@ -8,10 +6,10 @@ from logic_check.time_validator import TimeValidator
 from logic_check.data_validator import DataValidator
 
 from configs.logging_config import LoggerConfig
-from configs.database_config import DatabaseManager
+from configs.database_config.database_manager import DatabaseManager
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
-from utils.platform_util import PlatformManager
+from utils.platform_util.platform_manager import PlatformManager
 from utils.symbol_resolver_util import SymbolResolverUtil
 
 
