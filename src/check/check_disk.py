@@ -1,6 +1,7 @@
+"""Module kiểm tra file/folder modification time"""
+
 import asyncio
 from datetime import datetime
-import os
 from pathlib import Path
 
 from logic_check.time_validator import TimeValidator
@@ -9,14 +10,16 @@ from logic_check.data_validator import DataValidator
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
-from utils.platform_util import PlatformUtil
+from utils.platform_util import PlatformManager
 
 
 class CheckDisk:
+    """Class kiểm tra freshness của file/folder trên disk (mtime, ctime, atime)"""
+
     def __init__(self):
         self.logger_disk = LoggerConfig.logger_config("CheckDisk", "disk.log")
         self.task_manager_disk = TaskManager()
-        self.platform_util = PlatformUtil()
+        self.platform_util = PlatformManager()
 
         # Tracking alert frequency: {display_name: last_alert_time}
         self.last_alert_times = {}
@@ -29,11 +32,23 @@ class CheckDisk:
         self.outside_schedule_logged = {}
 
     def _load_config(self):
-        """Load config from JSON file (called every check cycle)"""
+        """
+        Load config từ JSON file (gọi mỗi chu kỳ check)
+
+        Returns:
+            Dict chứa các disk check config
+        """
         return LoadConfigUtil.load_json_to_variable("check_disk_config.json")
 
     async def check_data_disk(self, disk_name, disk_config, symbol=None):
-        """Hàm logic check file/folder trên disk chạy liên tục"""
+        """
+        Hàm logic kiểm tra file/folder trên disk chạy liên tục
+
+        Args:
+            disk_name: Tên disk check config
+            disk_config: Dict cấu hình disk check
+            symbol: Optional symbol cho dynamic path
+        """
         file_path = disk_config.get("file_path")  # Đường dẫn file/folder
         check_type = disk_config.get("check_type", "mtime")  # mtime, ctime, atime
         timezone_offset = disk_config.get("timezone_offset", 7)

@@ -1,10 +1,12 @@
+"""Utility load config từ file JSON"""
+
 import glob
 import json
 import os
 
 
 class LoadConfigUtil:
-    """Utility để load config từ file JSON động"""
+    """Utility để load config từ file JSON với caching và auto-reload"""
 
     _cache = {}
     _last_modified = {}

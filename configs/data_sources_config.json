@@ -1,21 +1,32 @@
 {
     "gold-data": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": null,
-        "api_url": "http://192.168.110.164:8010/gold-data/?day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "gold_db",
-        "collection_name": "gold_minute_data",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
+        "api": {
+            "enable": true,
+            "url": "http://192.168.110.164:8010/gold-data/?day=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "gold_db",
+            "collection_name": "gold_minute_data",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 70,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "max_stale_days": 3
+        },
+        "schedule": {
             "days": [
                 0,
                 1,
@@ -23,48 +34,69 @@
                 3,
                 4
             ],
-            "hours": [
-                "00:00-23:59"
-            ]
+            "hours": null
         }
     },
     "cmc": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": true,
-        "symbols": null,
-        "api_url": "http://192.168.110.164:8010/crypto/cmc/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "cmc_db",
-        "collection_name": "cmc",
-        "symbol_column": "symbol",
-        "column_to_check": "datetime",
-        "timezone_offset": 0,
-        "allow_delay": 1800,
-        "check_frequency": 60,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": null
+        "api": {
+            "enable": true,
+            "url": "http://192.168.110.164:8010/crypto/cmc/?symbol={symbol}&day=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "cmc_db",
+            "collection_name": "cmc",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": true,
+            "values": null,
+            "column": "symbol"
+        },
+        "check": {
+            "timezone_offset": 0,
+            "allow_delay": 1800,
+            "check_frequency": 60,
+            "alert_frequency": 60,
+            "max_stale_days": 3
+        },
+        "schedule": {
+            "days": null,
+            "hours": null
+        }
     },
     "etf_candlestick": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": true,
-        "symbols": null,
-        "api_url": "http://192.168.110.164:8010/crypto/etf-candlestick/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "etf_candlestick_db",
-        "collection_name": "etf_candlestick",
-        "symbol_column": "symbol",
-        "column_to_check": "datetime",
-        "timezone_offset": 0,
-        "allow_delay": 900,
-        "check_frequency": 10,
-        "alert_frequency": 300,
-        "max_stale_days": 3,
-        "valid_schedule": {
+        "api": {
+            "enable": true,
+            "url": "http://192.168.110.164:8010/crypto/etf-candlestick/?symbol={symbol}&day=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "etf_candlestick_db",
+            "collection_name": "etf_candlestick",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": true,
+            "values": null,
+            "column": "symbol"
+        },
+        "check": {
+            "timezone_offset": 0,
+            "allow_delay": 15,
+            "check_frequency": 300,
+            "alert_frequency": 300,
+            "max_stale_days": 3
+        },
+        "schedule": {
             "days": [
                 0,
                 1,
@@ -79,36 +111,65 @@
         }
     },
     "btc-dominance": {
-        "enable_api_check": false,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": null,
-        "db_type": "mongodb",
-        "database": "btc_dominance",
-        "collection_name": "raw_btc_dominance",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 86400,
-        "check_frequency": 60,
-        "alert_frequency": 60,
-        "max_stale_days": 7,
-        "valid_schedule": null
+        "api": {
+            "enable": false,
+            "url": null,
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "btc_dominance",
+            "collection_name": "raw_btc_dominance",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 86400,
+            "check_frequency": 60,
+            "alert_frequency": 60,
+            "max_stale_days": 7
+        },
+        "schedule": {
+            "days": null,
+            "hours": null
+        }
     },
     "ssi": {
-        "enable_api_check": false,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": null,
-        "db_type": "mongodb",
-        "database": "ckvn_raw",
-        "collection_name": "vn30f1m_trade_realtime_ssi",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 10,
-        "check_frequency": 30,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
+        "api": {
+            "enable": false,
+            "url": null,
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "ckvn_raw",
+            "collection_name": "vn30f1m_trade_realtime_ssi",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 10,
+            "check_frequency": 30,
+            "alert_frequency": 60,
+            "max_stale_days": 3
+        },
+        "schedule": {
             "days": [
                 0,
                 1,
@@ -123,20 +184,33 @@
         }
     },
     "vps": {
-        "enable_api_check": false,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": null,
-        "db_type": "mongodb",
-        "database": "ckvn_raw",
-        "collection_name": "vn30f1m_trade_realtime_vps",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 30,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
+        "api": {
+            "enable": false,
+            "url": null,
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "ckvn_raw",
+            "collection_name": "vn30f1m_trade_realtime_vps",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 30,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "max_stale_days": 3
+        },
+        "schedule": {
             "days": [
                 0,
                 1,
@@ -151,20 +225,33 @@
         }
     },
     "vn100": {
-        "enable_api_check": false,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": null,
-        "db_type": "postgresql",
-        "database": "dl_ckvn",
-        "table": "vn100",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 86400,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
+        "api": {
+            "enable": false,
+            "url": null,
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "postgresql",
+            "database": "dl_ckvn",
+            "table": "vn100",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 86400,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "max_stale_days": 3
+        },
+        "schedule": {
             "days": [
                 0,
                 1,
@@ -175,353 +262,6 @@
             "hours": [
                 "9:00-11:30",
                 "13:00-14:30"
-            ]
-        }
-    },
-    "vxx": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "vxx",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "vxx",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "21:30-04:00"
-            ]
-        }
-    },
-    "usd_vnd": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "usd_vnd",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol=usd_vnd&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "usd_vnd",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "00:00-23:59"
-            ]
-        }
-    },
-    "sp_500": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "sp500",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "sp_500",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "21:30-04:00"
-            ]
-        }
-    },
-    "oxy": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "oxy",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "oxy",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "21:30-04:00"
-            ]
-        }
-    },
-    "nikkei": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "nikkei",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "nikkei",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "07:00-13:00"
-            ]
-        }
-    },
-    "nasdaq": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "nasdaq",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "nasdaq",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "21:30-04:00"
-            ]
-        }
-    },
-    "kospi": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "kospi",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "kospi",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "07:00-13:00"
-            ]
-        }
-    },
-    "hang_seng": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "hsi",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "hang_seng",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "08:30-15:00"
-            ]
-        }
-    },
-    "dxy": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "dxy",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol=dxy&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "dxy",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "00:00-23:59"
-            ]
-        }
-    },
-    "down_jones": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "dji",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "down_jones",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "21:30-04:00"
-            ]
-        }
-    },
-    "csi_300": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "csi300",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "csi_300",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "08:30-15:00"
-            ]
-        }
-    },
-    "dji": {
-        "enable_api_check": true,
-        "enable_db_check": true,
-        "auto_sync_symbols": null,
-        "symbols": "dji",
-        "api_url": "http://192.168.110.164:8010/crypto/other-data/?symbol={symbol}&day=0",
-        "record_pointer": 0,
-        "db_type": "mongodb",
-        "database": "other_data",
-        "collection_name": "dji",
-        "column_to_check": "datetime",
-        "timezone_offset": 7,
-        "allow_delay": 70,
-        "check_frequency": 10,
-        "alert_frequency": 60,
-        "max_stale_days": 3,
-        "valid_schedule": {
-            "days": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "hours": [
-                "21:30-04:00"
             ]
         }
     }

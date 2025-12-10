@@ -1,0 +1,4 @@
+# Cache directory cho symbols
+# File cache sẽ tự động được tạo bởi SymbolResolverUtil
+# Format: symbols_{api_name}.json
+# Expiry: 24 hours

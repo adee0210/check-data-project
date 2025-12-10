@@ -1,3 +1,5 @@
+"""Cấu hình logging cho hệ thống"""
+
 import logging
 import os
 import sys
@@ -5,18 +7,30 @@ from logging.handlers import RotatingFileHandler
 
 
 class LoggerConfig:
+    """Class cấu hình logger với file rotation và console output"""
 
     @staticmethod
     def logger_config(
         log_name: str, log_file: str = "main.log", log_level: int = logging.INFO
     ):
+        """
+        Tạo và cấu hình logger
+
+        Args:
+            log_name: Tên logger
+            log_file: Tên file log (default: "main.log")
+            log_level: Level logging (default: INFO)
+
+        Returns:
+            Logger instance
+        """
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         base_path = os.path.join(root_dir, "logs", log_file)
 
         # Tạo thư mục logs nếu chưa tồn tại
         os.makedirs(os.path.dirname(base_path), exist_ok=True)
 
-        # formatter
+        # Formatter cho log message
         formatter = logging.Formatter(
             "%(asctime)s - %(processName)s - %(levelname)s - %(name)s - %(message)s"
         )

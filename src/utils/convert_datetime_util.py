@@ -1,9 +1,22 @@
+"""Utilities chuyển đổi datetime"""
+
 import datetime
 
 
 class ConvertDatetimeUtil:
+    """Class cung cấp các phương thức chuyển đổi datetime"""
+
     @staticmethod
     def convert_isodatetime_todatetime(iso_datetime_str):
+        """
+        Chuyển đổi ISO datetime string sang datetime object
+
+        Args:
+            iso_datetime_str: String ISO format (vd: "2025-12-04T14:30:00Z")
+
+        Returns:
+            datetime object hoặc None nếu lỗi
+        """
         try:
             return datetime.datetime.fromisoformat(
                 iso_datetime_str.replace("Z", "+00:00")

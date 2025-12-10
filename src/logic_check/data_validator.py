@@ -1,3 +1,5 @@
+"""Module xử lý logic kiểm tra dữ liệu hợp lệ"""
+
 from datetime import datetime, timedelta
 
 

@@ -1,3 +1,5 @@
+"""Module kiểm tra database freshness"""
+
 import asyncio
 from datetime import datetime
 
@@ -6,18 +8,20 @@ from logic_check.time_validator import TimeValidator
 from logic_check.data_validator import DataValidator
 
 from configs.logging_config import LoggerConfig
-from configs.database_config import DatabaseConfig
+from configs.database_config import DatabaseManager
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
-from utils.platform_util import PlatformUtil
+from utils.platform_util import PlatformManager
 from utils.symbol_resolver_util import SymbolResolverUtil
 
 
 class CheckDatabase:
+    """Class kiểm tra data freshness từ database (MongoDB, PostgreSQL)"""
+
     def __init__(self):
         self.logger_db = LoggerConfig.logger_config("CheckDatabase", "database.log")
         self.task_manager_db = TaskManager()
-        self.platform_util = PlatformUtil()
+        self.platform_util = PlatformManager()
 
         # Tracking alert frequency: {display_name: last_alert_time}
         self.last_alert_times = {}
@@ -30,25 +34,51 @@ class CheckDatabase:
         self.outside_schedule_logged = {}
 
         # Database connector
-        self.db_connector = DatabaseConfig()
+        self.db_connector = DatabaseManager()
+
+        # Symbols cache ở class level để persist qua các reload
+        self.symbols_cache = {}
+
+        # Track items vượt quá max_stale_days: {display_name: first_exceeded_time}
+        # Để chỉ log warning 1 lần và skip check
+        self.max_stale_exceeded = {}
 
     def _load_config(self):
-        """Load config from JSON file (called every check cycle)"""
+        """
+        Load config từ JSON file (gọi mỗi chu kỳ check)
+
+        Returns:
+            Dict chứa các database config với database.enable = true
+        """
         all_config = LoadConfigUtil.load_json_to_variable("data_sources_config.json")
-        # Filter chỉ lấy những config có enable_db_check = true
-        return {k: v for k, v in all_config.items() if v.get("enable_db_check", False)}
+        # Filter chỉ lấy những config có database.enable = true
+        return {
+            k: v
+            for k, v in all_config.items()
+            if v.get("database", {}).get("enable", False)
+        }
 
     async def check_data_database(self, db_name, db_config, symbol=None):
-        """Hàm logic check data từ database chạy liên tục"""
-        timezone_offset = db_config.get("timezone_offset", 7)
-        allow_delay = db_config.get("allow_delay")
-        alert_frequency = db_config.get("alert_frequency", 60)
-        check_frequency = db_config.get("check_frequency")
-        valid_schedule = db_config.get("valid_schedule", {})
-        holiday_grace_period = db_config.get("holiday_grace_period", 2 * 3600)
-        max_stale_days = db_config.get(
-            "max_stale_days", None
-        )  # Số ngày tối đa data cũ trước khi dừng alert
+        """
+        Hàm logic kiểm tra data từ database chạy liên tục
+
+        Args:
+            db_name: Tên database config
+            db_config: Dict cấu hình database
+            symbol: Optional symbol để filter
+        """
+        # Đọc config từ cấu trúc mới
+        check_cfg = db_config.get("check", {})
+        schedule_cfg = db_config.get("schedule", {})
+
+        timezone_offset = check_cfg.get("timezone_offset", 7)
+        allow_delay = check_cfg.get("allow_delay", 60)
+        alert_frequency = check_cfg.get("alert_frequency", 60)
+        check_frequency = check_cfg.get("check_frequency", 10)
+        max_stale_days = check_cfg.get("max_stale_days", None)
+
+        valid_schedule = schedule_cfg
+        holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
 
         # Tạo display name
         if symbol:
@@ -155,6 +185,23 @@ class CheckDatabase:
                 dt_latest_time, allow_delay
             )
 
+            # EARLY CHECK: Nếu data đã vượt quá max_stale_days, dừng hẳn
+            if not is_fresh and max_stale_days is not None:
+                total_stale_seconds = overdue_seconds + allow_delay
+                stale_days = total_stale_seconds / 86400
+
+                if stale_days > max_stale_days:
+                    # Chỉ log warning 1 lần rồi dừng hẳn
+                    if display_name not in self.max_stale_exceeded:
+                        self.max_stale_exceeded[display_name] = datetime.now()
+                        self.logger_db.warning(
+                            f"Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày). "
+                            f"Dừng check và alert cho item này VĨNH VIỄN."
+                        )
+
+                    # Dừng hẳn task này - không check nữa
+                    return
+
             if not is_fresh:
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
@@ -166,26 +213,32 @@ class CheckDatabase:
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
-                # Smart holiday detection - track stale databases
+                # Track stale databases
                 if display_name not in self.first_stale_times:
                     self.first_stale_times[display_name] = current_time
 
-                # Tracking suspected holidays
-                if current_date not in self.suspected_holidays:
-                    self.suspected_holidays[current_date] = {
-                        "db_count": 0,
-                        "first_detected": current_time,
-                    }
+                # Lấy thời gian data mới nhất từ dt_latest_time để kiểm tra ngày lễ
+                latest_data_date = dt_latest_time.strftime("%Y-%m-%d")
 
+                # Kiểm tra ngày lễ: Chỉ báo khi data mới nhất KHÔNG PHẢI hôm nay
+                # (tức là chưa có data nào hôm nay, nghi ngờ ngày lễ)
+                is_data_from_today = latest_data_date == current_date
+
+                # Đếm số database có data KHÔNG PHẢI hôm nay
                 stale_count = sum(
                     1
-                    for name, stale_time in self.first_stale_times.items()
-                    if (current_time - stale_time).total_seconds() > allow_delay
+                    for name in self.first_stale_times.keys()
+                    if name in self.first_stale_times  # Chỉ đếm những item đang stale
                 )
-                self.suspected_holidays[current_date]["db_count"] = stale_count
 
                 total_dbs = len(self.first_stale_times)
-                is_suspected_holiday = stale_count >= max(2, total_dbs * 0.5)
+
+                # Chỉ báo ngày lễ khi:
+                # 1. Data mới nhất KHÔNG phải hôm nay (chưa có data mới hôm nay)
+                # 2. Nhiều database cùng tình trạng (>= 50%)
+                is_suspected_holiday = (not is_data_from_today) and (
+                    stale_count >= max(2, int(total_dbs * 0.5))
+                )
 
                 # Kiểm tra alert frequency
                 last_alert = self.last_alert_times.get(display_name)
@@ -198,19 +251,6 @@ class CheckDatabase:
                     time_since_last_alert = (current_time - last_alert).total_seconds()
                     if time_since_last_alert >= alert_frequency:
                         should_send_alert = True
-
-                # Kiểm tra max_stale_days: Nếu data cũ quá X ngày → dừng gửi alert
-                if max_stale_days is not None and should_send_alert:
-                    total_stale_seconds = overdue_seconds + allow_delay
-                    stale_days = total_stale_seconds / 86400  # Convert to days
-
-                    if stale_days > max_stale_days:
-                        # Data đã cũ quá lâu, dừng gửi alert
-                        self.logger_db.error(
-                            f"LỖI: Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày) - "
-                            f"Data không ổn định hoặc nguồn dữ liệu đã ngừng cập nhật, cần kiểm tra!"
-                        )
-                        should_send_alert = False
 
                 if should_send_alert:
                     if is_suspected_holiday:
@@ -262,15 +302,15 @@ class CheckDatabase:
             # Reload config để phát hiện thay đổi
             config_db = self._load_config()
 
-            # Cache symbols để tránh gọi resolve 2 lần
-            symbols_cache = {}
-
             # Tạo list các item cần check
             expected_items = set()
             for db_name, db_config in config_db.items():
-                # Resolve symbols dựa trên auto_sync_symbols và cache kết quả
-                symbols = SymbolResolverUtil.resolve_api_symbols(db_name, db_config)
-                symbols_cache[db_name] = symbols
+                # Chỉ resolve symbols khi chưa có trong cache
+                if db_name not in self.symbols_cache:
+                    symbols = SymbolResolverUtil.resolve_api_symbols(db_name, db_config)
+                    self.symbols_cache[db_name] = symbols
+                else:
+                    symbols = self.symbols_cache[db_name]
 
                 if symbols is None:
                     # Database không cần symbols
@@ -295,10 +335,16 @@ class CheckDatabase:
                     del running_tasks[item_name]
                     self.logger_db.info(f"Đã dừng task cho {item_name}")
 
-            # Start task mới - dùng symbols từ cache
+                    # Cleanup symbols cache
+                    db_name = item_name.split("-")[0]
+                    if db_name not in config_db and db_name in self.symbols_cache:
+                        del self.symbols_cache[db_name]
+                        self.logger_db.info(f"Đã xóa symbols cache cho {db_name}")
+
+            # Start task mới - dùng symbols từ class cache
             for db_name, db_config in config_db.items():
-                # Lấy symbols từ cache (đã resolve ở trên)
-                symbols = symbols_cache[db_name]
+                # Lấy symbols từ class cache (đã resolve ở trên)
+                symbols = self.symbols_cache.get(db_name)
 
                 if symbols is None:
                     # Database không cần symbols

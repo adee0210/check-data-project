@@ -1,3 +1,5 @@
+"""Manager quản lý async tasks"""
+
 import asyncio
 
 
@@ -5,7 +7,16 @@ class TaskManager:
     """Quản lý tạo và chạy các task async dùng chung cho nhiều loại kiểm tra"""
 
     def create_tasks(self, task_func, configs: dict):
-        """Tạo danh sách các task từ configs, task_func là hàm async nhận (name, config, symbol)"""
+        """
+        Tạo danh sách các task từ configs
+
+        Args:
+            task_func: Hàm async nhận (name, config, symbol)
+            configs: Dict chứa cấu hình các tasks
+
+        Returns:
+            List of asyncio tasks
+        """
         tasks = []
         for name, config in configs.items():
             symbols = config.get("symbols")
@@ -22,6 +33,12 @@ class TaskManager:
         return tasks
 
     async def run_tasks(self, task_func, configs: dict):
-        """Khởi tạo và chạy các task với gather, dùng cho mọi loại kiểm tra"""
+        """
+        Khởi tạo và chạy các task với gather
+
+        Args:
+            task_func: Hàm async nhận (name, config, symbol)
+            configs: Dict chứa cấu hình các tasks
+        """
         tasks = self.create_tasks(task_func, configs)
         await asyncio.gather(*tasks)

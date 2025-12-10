@@ -1,3 +1,5 @@
+"""Module kiểm tra API endpoints"""
+
 import asyncio
 from datetime import datetime
 
@@ -9,15 +11,17 @@ from logic_check.data_validator import DataValidator
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
 from utils.load_config_util import LoadConfigUtil
-from utils.platform_util import PlatformUtil
+from utils.platform_util import PlatformManager
 from utils.symbol_resolver_util import SymbolResolverUtil
 
 
 class CheckAPI:
+    """Class kiểm tra data freshness từ API endpoints"""
+
     def __init__(self):
         self.logger_api = LoggerConfig.logger_config("CheckAPI", "api.log")
         self.task_manager_api = TaskManager()
-        self.platform_util = PlatformUtil()
+        self.platform_util = PlatformManager()
 
         # Tracking alert frequency: {display_name: last_alert_time}
         self.last_alert_times = {}
@@ -30,26 +34,53 @@ class CheckAPI:
         # Để chỉ log 1 lần khi vào/ra khỏi schedule
         self.outside_schedule_logged = {}
 
+        # Symbols cache ở class level để persist qua các reload
+        # Format: {api_name: symbols_list}
+        self.symbols_cache = {}
+
+        # Track items vượt quá max_stale_days
+        self.max_stale_exceeded = {}
+
     def _load_config(self):
-        """Load config from JSON file (called every check cycle)"""
+        """
+        Load config từ JSON file (gọi mỗi chu kỳ check)
+
+        Returns:
+            Dict chứa các API config với api.enable = true
+        """
         all_config = LoadConfigUtil.load_json_to_variable("data_sources_config.json")
-        # Filter chỉ lấy những config có enable_api_check = true
-        return {k: v for k, v in all_config.items() if v.get("enable_api_check", False)}
+        # Filter chỉ lấy những config có api.enable = true
+        return {
+            k: v for k, v in all_config.items() if v.get("api", {}).get("enable", False)
+        }
 
     async def check_data_api(self, api_name, api_config, symbol=None):
-        """Hàm logic check data cho API chạy liên tục"""
-        uri = api_config.get("api_url") or api_config.get("uri")
-        record_pointer = api_config.get("record_pointer")
-        column_to_check = api_config.get("column_to_check")
-        timezone_offset = api_config.get("timezone_offset")
-        allow_delay = api_config.get("allow_delay")
-        alert_frequency = api_config.get("alert_frequency")
-        check_frequency = api_config.get("check_frequency")
-        valid_schedule = api_config.get("valid_schedule", {})
-        holiday_grace_period = api_config.get("holiday_grace_period", 2 * 3600)
-        max_stale_days = api_config.get(
-            "max_stale_days", None
-        )  # Số ngày tối đa data cũ trước khi dừng alert
+        """
+        Hàm logic kiểm tra data từ API chạy liên tục
+
+        Args:
+            api_name: Tên API config
+            api_config: Dict cấu hình API
+            symbol: Optional symbol để filter
+        """
+        # Đọc config từ cấu trúc mới
+        api_cfg = api_config.get("api", {})
+        check_cfg = api_config.get("check", {})
+        schedule_cfg = api_config.get("schedule", {})
+        symbols_cfg = api_config.get("symbols", {})
+
+        uri = api_cfg.get("url")
+        record_pointer = api_cfg.get("record_pointer", 0)
+        column_to_check = api_cfg.get("column_to_check", "datetime")
+
+        timezone_offset = check_cfg.get("timezone_offset", 7)
+        allow_delay = check_cfg.get("allow_delay", 60)
+        alert_frequency = check_cfg.get("alert_frequency", 60)
+        check_frequency = check_cfg.get("check_frequency", 10)
+        max_stale_days = check_cfg.get("max_stale_days", None)
+
+        valid_schedule = schedule_cfg
+        holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
 
         if symbol:
             uri = uri.format(symbol=symbol)
@@ -84,6 +115,19 @@ class CheckAPI:
                 r.raise_for_status()
 
                 data = r.json()
+
+                # Kiểm tra cấu trúc dữ liệu
+                if "data" not in data:
+                    raise KeyError("Response không có key 'data'")
+
+                if not isinstance(data["data"], list) or len(data["data"]) == 0:
+                    raise IndexError("Mảng 'data' rỗng hoặc không phải list")
+
+                if record_pointer >= len(data["data"]):
+                    raise IndexError(
+                        f"record_pointer {record_pointer} vượt quá độ dài mảng {len(data['data'])}"
+                    )
+
                 record_pointer_data_with_column_to_check = data["data"][record_pointer][
                     column_to_check
                 ]
@@ -167,6 +211,23 @@ class CheckAPI:
                 dt_record_pointer_data_with_column_to_check, allow_delay
             )
 
+            # EARLY CHECK: Nếu data đã vượt quá max_stale_days, dừng hẳn
+            if not is_fresh and max_stale_days is not None:
+                total_stale_seconds = overdue_seconds + allow_delay
+                stale_days = total_stale_seconds / 86400
+
+                if stale_days > max_stale_days:
+                    # Chỉ log warning 1 lần rồi dừng hẳn
+                    if display_name not in self.max_stale_exceeded:
+                        self.max_stale_exceeded[display_name] = datetime.now()
+                        self.logger_api.warning(
+                            f"Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày). "
+                            f"Dừng check và alert cho item này VĨNH VIỄN."
+                        )
+
+                    # Dừng hẳn task này
+                    return
+
             if not is_fresh:
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
@@ -188,22 +249,27 @@ class CheckAPI:
                 first_stale_time = self.first_stale_times[display_name]
                 time_since_stale = (current_time - first_stale_time).total_seconds()
 
-                if current_date not in self.suspected_holidays:
-                    self.suspected_holidays[current_date] = {
-                        "api_count": 0,
-                        "first_detected": current_time,
-                    }
+                # Lấy ngày của data mới nhất
+                latest_data_date = dt_record_pointer_data_with_column_to_check.strftime(
+                    "%Y-%m-%d"
+                )
 
+                # Kiểm tra ngày lễ: Data mới nhất có phải hôm nay không?
+                is_data_from_today = latest_data_date == current_date
+
+                # Đếm số API stale
                 stale_count = sum(
                     1
-                    for name, stale_time in self.first_stale_times.items()
-                    if (current_time - stale_time).total_seconds() > allow_delay
+                    for name in self.first_stale_times.keys()
+                    if name in self.first_stale_times
                 )
-                self.suspected_holidays[current_date]["api_count"] = stale_count
 
-                # Nếu nhiều API cùng stale (>= 50% tổng số API) → rất nghi ngờ ngày lễ
                 total_apis = len(self.first_stale_times)
-                is_suspected_holiday = stale_count >= max(2, total_apis * 0.5)
+
+                # Chỉ báo ngày lễ khi data KHÔNG phải hôm nay và nhiều API cùng tình trạng
+                is_suspected_holiday = (not is_data_from_today) and (
+                    stale_count >= max(2, int(total_apis * 0.5))
+                )
 
                 # Grace period: Chỉ gửi alert sau khi chờ một khoảng
                 if time_since_stale < holiday_grace_period:
@@ -229,19 +295,6 @@ class CheckAPI:
                     time_since_last_alert = (current_time - last_alert).total_seconds()
                     if time_since_last_alert >= alert_frequency:
                         should_send_alert = True
-
-                # Kiểm tra max_stale_days: Nếu data cũ quá X ngày → dừng gửi alert
-                if max_stale_days is not None and should_send_alert:
-                    total_stale_seconds = overdue_seconds + allow_delay
-                    stale_days = total_stale_seconds / 86400  # Convert to days
-
-                    if stale_days > max_stale_days:
-                        # Data đã cũ quá lâu, dừng gửi alert
-                        self.logger_api.error(
-                            f"LỖI: Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày) - "
-                            f"Data không ổn định hoặc nguồn dữ liệu đã ngừng cập nhật, cần kiểm tra!"
-                        )
-                        should_send_alert = False
 
                 if should_send_alert:
                     # Tạo message với ngữ cảnh
@@ -292,15 +345,18 @@ class CheckAPI:
             # Reload config để phát hiện thay đổi
             config_api = self._load_config()
 
-            # Cache symbols để tránh gọi resolve 2 lần
-            symbols_cache = {}
-
             # Tạo list các item cần check
             expected_items = set()
             for api_name, api_config in config_api.items():
-                # Resolve symbols dựa trên auto_sync_symbols và cache kết quả
-                symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
-                symbols_cache[api_name] = symbols
+                # Chỉ resolve symbols khi chưa có trong cache hoặc config thay đổi
+                # SymbolResolverUtil đã có cache 24h cho DISTINCT query
+                if api_name not in self.symbols_cache:
+                    symbols = SymbolResolverUtil.resolve_api_symbols(
+                        api_name, api_config
+                    )
+                    self.symbols_cache[api_name] = symbols
+                else:
+                    symbols = self.symbols_cache[api_name]
 
                 if symbols is None:
                     # API không cần symbols (ví dụ: gold-data)
@@ -325,10 +381,16 @@ class CheckAPI:
                     del running_tasks[item_name]
                     self.logger_api.info(f"Đã dừng task cho {item_name}")
 
-            # Start task mới - dùng symbols từ cache
+                    # Cleanup symbols cache cho API đã bị remove
+                    api_name = item_name.split("-")[0]
+                    if api_name not in config_api and api_name in self.symbols_cache:
+                        del self.symbols_cache[api_name]
+                        self.logger_api.info(f"Đã xóa symbols cache cho {api_name}")
+
+            # Start task mới - dùng symbols từ class cache
             for api_name, api_config in config_api.items():
-                # Lấy symbols từ cache (đã resolve ở trên)
-                symbols = symbols_cache[api_name]
+                # Lấy symbols từ class cache (đã resolve ở trên)
+                symbols = self.symbols_cache.get(api_name)
 
                 if symbols is None:
                     # API không cần symbols

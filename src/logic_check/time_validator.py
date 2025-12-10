@@ -1,7 +1,11 @@
+"""Module xử lý logic kiểm tra lịch trình"""
+
 from datetime import datetime
 
 
 class TimeValidator:
+    """Xử lý logic kiểm tra thời gian nằm trong lịch hợp lệ"""
+
     @staticmethod
     def _check_single_schedule(schedule, current_weekday, current_time):
         """

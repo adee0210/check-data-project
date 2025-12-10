@@ -1,0 +1,10 @@
+{
+  "api_name": "cmc",
+  "cached_at": "2025-12-10T14:27:37.039020",
+  "symbols": [
+    "BNB",
+    "ETH",
+    "XRP"
+  ],
+  "count": 3
+}
