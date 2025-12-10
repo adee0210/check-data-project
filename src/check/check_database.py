@@ -81,29 +81,27 @@ class CheckDatabase:
             display_name = db_name
 
         while True:
-            # Kiểm tra valid_schedule
-            is_within_schedule = TimeValidator.is_within_valid_schedule(valid_schedule)
-
-            if not is_within_schedule:
-                # Chỉ log 1 lần khi vào trạng thái ngoài giờ
-                if not self.outside_schedule_logged.get(display_name, False):
-                    self.logger_db.info(
-                        f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
-                    )
-                    self.outside_schedule_logged[display_name] = True
-
-                await asyncio.sleep(60)
-                continue
-            else:
-                # Reset flag khi vào lại trong giờ
-                if self.outside_schedule_logged.get(display_name, False):
-                    self.logger_db.info(
-                        f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
-                    )
-                    self.outside_schedule_logged[display_name] = False
-
-            # Thực hiện query database
             try:
+                # Kiểm tra valid_schedule
+                is_within_schedule = TimeValidator.is_within_valid_schedule(valid_schedule)
+
+                if not is_within_schedule:
+                    # Chỉ log 1 lần khi vào trạng thái ngoài giờ
+                    if not self.outside_schedule_logged.get(display_name, False):
+                        self.logger_db.info(
+                            f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
+                        )
+                        self.outside_schedule_logged[display_name] = True
+
+                    await asyncio.sleep(60)
+                    continue
+                else:
+                    # Reset flag khi vào lại trong giờ
+                    if self.outside_schedule_logged.get(display_name, False):
+                        self.logger_db.info(
+                            f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
+                        )
+                        self.outside_schedule_logged[display_name] = False
                 latest_time = self.db_connector.query(db_name, db_config, symbol)
 
                 if latest_time is None:
@@ -281,12 +279,46 @@ class CheckDatabase:
                 if display_name in self.first_stale_times:
                     del self.first_stale_times[display_name]
 
-            self.logger_db.info(
-                f"Kiểm tra database {display_name} - {'Có dữ liệu mới' if is_fresh else 'Dữ liệu cũ'}"
-            )
+                self.logger_db.info(
+                    f"Kiểm tra database {display_name} - Có dữ liệu mới"
+                )
 
-            # Sleep
-            await asyncio.sleep(check_frequency)
+                # Sleep
+                await asyncio.sleep(check_frequency)
+
+            except Exception as e:
+                # Catch-all cho mọi lỗi chưa được handle
+                error_message = f"Lỗi không xác định: {str(e)}"
+                self.logger_db.error(
+                    f"❌ CRITICAL ERROR trong task {display_name}: {error_message}",
+                    exc_info=True
+                )
+                
+                # Gửi alert về lỗi critical
+                current_time = datetime.now()
+                last_alert = self.last_alert_times.get(display_name)
+                
+                should_send_alert = (
+                    last_alert is None or 
+                    (current_time - last_alert).total_seconds() >= alert_frequency
+                )
+                
+                if should_send_alert:
+                    self.platform_util.send_alert(
+                        api_name=db_name,
+                        symbol=symbol,
+                        overdue_seconds=0,
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="error",
+                        error_message=error_message,
+                        error_type="SYSTEM"
+                    )
+                    self.last_alert_times[display_name] = current_time
+                
+                # Sleep trước khi retry
+                await asyncio.sleep(check_frequency)
 
     async def run_database_tasks(self):
         """Chạy tất cả các task kiểm tra database với config được load động"""

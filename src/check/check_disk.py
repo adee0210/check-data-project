@@ -151,26 +151,25 @@ class CheckDisk:
             display_name = disk_name
 
         while True:
-            # Kiểm tra valid_schedule
-            is_within_schedule = TimeValidator.is_within_valid_schedule(valid_schedule)
-
-            if not is_within_schedule:
-                if not self.outside_schedule_logged.get(display_name, False):
-                    self.logger_disk.info(
-                        f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
-                    )
-                    self.outside_schedule_logged[display_name] = True
-
-                await asyncio.sleep(60)
-                continue
-            else:
-                if self.outside_schedule_logged.get(display_name, False):
-                    self.logger_disk.info(
-                        f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
-                    )
-                    self.outside_schedule_logged[display_name] = False
-
             try:
+                # Kiểm tra valid_schedule
+                is_within_schedule = TimeValidator.is_within_valid_schedule(valid_schedule)
+
+                if not is_within_schedule:
+                    if not self.outside_schedule_logged.get(display_name, False):
+                        self.logger_disk.info(
+                            f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
+                        )
+                        self.outside_schedule_logged[display_name] = True
+
+                    await asyncio.sleep(60)
+                    continue
+                else:
+                    if self.outside_schedule_logged.get(display_name, False):
+                        self.logger_disk.info(
+                            f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
+                        )
+                        self.outside_schedule_logged[display_name] = False
                 # Kiểm tra file type và lấy datetime
                 if file_type in ["json", "csv", "txt"]:
                     # Đọc datetime từ nội dung file
@@ -361,12 +360,46 @@ class CheckDisk:
                 if display_name in self.first_stale_times:
                     del self.first_stale_times[display_name]
 
-            self.logger_disk.info(
-                f"Kiểm tra disk {display_name} - {'Có dữ liệu mới' if is_fresh else 'Dữ liệu cũ'}"
-            )
+                self.logger_disk.info(
+                    f"Kiểm tra disk {display_name} - Có dữ liệu mới"
+                )
 
-            # Sleep theo check_frequency
-            await asyncio.sleep(check_frequency)
+                # Sleep theo check_frequency
+                await asyncio.sleep(check_frequency)
+
+            except Exception as e:
+                # Catch-all cho bất kỳ lỗi nào chưa được xử lý
+                error_message = f"Lỗi không xác định: {str(e)}"
+                self.logger_disk.error(
+                    f"❌ CRITICAL ERROR trong task {display_name}: {error_message}", 
+                    exc_info=True
+                )
+                
+                # Gửi alert về lỗi critical
+                current_time = datetime.now()
+                last_alert = self.last_alert_times.get(display_name)
+                
+                should_send_alert = (
+                    last_alert is None or 
+                    (current_time - last_alert).total_seconds() >= alert_frequency
+                )
+                
+                if should_send_alert:
+                    self.platform_util.send_alert(
+                        api_name=disk_name,
+                        symbol=symbol,
+                        overdue_seconds=0,
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="error",
+                        error_message=error_message,
+                        error_type="SYSTEM"
+                    )
+                    self.last_alert_times[display_name] = current_time
+                
+                # Sleep trước khi retry
+                await asyncio.sleep(check_frequency)
 
     async def run_disk_tasks(self):
         """Chạy tất cả các task kiểm tra disk với config được load động"""
