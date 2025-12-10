@@ -36,7 +36,7 @@ class LoggerConfig:
         file_handler = RotatingFileHandler(
             filename=base_path,
             maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=3,
+            backupCount=4,  # Tổng 5 file: 1 chính + 4 backup
             encoding="utf-8",
         )
         file_handler.setFormatter(formatter)

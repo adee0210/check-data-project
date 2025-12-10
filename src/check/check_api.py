@@ -230,22 +230,13 @@ class CheckAPI:
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
                 )
-                # Luôn ghi log
-                self.logger_api.warning(
-                    f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
-                )
 
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
+                # Track lần đầu data bị cũ
                 if display_name not in self.first_stale_times:
                     self.first_stale_times[display_name] = current_time
-                    self.logger_api.info(
-                        f"Bắt đầu tracking data cũ cho {display_name}, chờ grace period..."
-                    )
-
-                first_stale_time = self.first_stale_times[display_name]
-                time_since_stale = (current_time - first_stale_time).total_seconds()
 
                 # Lấy ngày của data mới nhất
                 latest_data_date = dt_record_pointer_data_with_column_to_check.strftime(
@@ -269,17 +260,11 @@ class CheckAPI:
                     stale_count >= max(2, int(total_apis * 0.5))
                 )
 
-                # Grace period: Chỉ gửi alert sau khi chờ một khoảng
-                if time_since_stale < holiday_grace_period:
-                    grace_remaining = holiday_grace_period - time_since_stale
-                    grace_minutes = int(grace_remaining / 60)
-                    self.logger_api.info(
-                        f"Data cũ cho {display_name}, đang trong grace period. "
-                        f"Còn {grace_minutes} phút trước khi gửi alert."
-                        f"{' (Nghi ngờ ngày lễ)' if is_suspected_holiday else ''}"
-                    )
-                    await asyncio.sleep(check_frequency)
-                    continue
+                # Log warning
+                self.logger_api.warning(
+                    f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
+                    f"{' (Nghi ngờ ngày lễ)' if is_suspected_holiday else ''}"
+                )
 
                 # Kiểm tra alert_frequency trước khi gửi lên platform
                 last_alert = self.last_alert_times.get(display_name)
