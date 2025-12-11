@@ -39,6 +39,7 @@ class BasePlatformNotifier(ABC):
         alert_level: str = "warning",
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
+        source_info: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Gửi alert message
@@ -52,7 +53,15 @@ class BasePlatformNotifier(ABC):
             alert_frequency: Tần suất alert (giây)
             alert_level: "warning" hoặc "error"
             error_message: Nội dung lỗi
-            error_type: Optional error type
+            error_type: "API", "DATABASE", "DISK"
+            source_info: Dict chứa thông tin nguồn {
+                "type": "API"|"DATABASE"|"DISK",
+                "url": "..." (nếu API),
+                "database": "..." (nếu DATABASE),
+                "collection": "..." (nếu MongoDB),
+                "table": "..." (nếu PostgreSQL),
+                "file_path": "..." (nếu DISK)
+            }
 
         Returns:
             True nếu gửi thành công, False nếu thất bại
@@ -120,6 +129,7 @@ class BasePlatformNotifier(ABC):
         alert_level: str,
         error_message: str,
         error_type: Optional[str],
+        source_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Build common message data cho tất cả platforms
@@ -139,8 +149,35 @@ class BasePlatformNotifier(ABC):
 
         emoji, color = self.get_alert_emoji_and_color(alert_level)
 
-        # Determine alert type text
-        if alert_level == "error" and error_type:
+        # Xác định source type và details
+        source_type = (
+            source_info.get("type", "")
+            if source_info
+            else (error_type if error_type else "")
+        )
+
+        # Build source details string
+        source_details = ""
+        if source_info:
+            if source_type == "API" and "url" in source_info:
+                source_details = f"URL: {source_info['url']}"
+            elif source_type == "DATABASE":
+                db_type = source_info.get("database_type", "Database").upper()
+                if "database" in source_info:
+                    db = source_info["database"]
+                    if "collection" in source_info:
+                        source_details = f"Type: {db_type}\nDatabase: {db}\nCollection: {source_info['collection']}"
+                    elif "table" in source_info:
+                        source_details = f"Type: {db_type}\nDatabase: {db}\nTable: {source_info['table']}"
+                    else:
+                        source_details = f"Type: {db_type}\nDatabase: {db}"
+            elif source_type == "DISK" and "file_path" in source_info:
+                source_details = f"File: {source_info['file_path']}"
+
+        # Determine alert type text with source type
+        if source_type:
+            alert_type = f"{api_name} - {source_type} - {'LỖI' if alert_level == 'error' else 'CẢNH BÁO'}"
+        elif alert_level == "error" and error_type:
             alert_type = f"LỖI {error_type}"
         elif alert_level == "error":
             alert_type = "LỖI"
@@ -164,6 +201,8 @@ class BasePlatformNotifier(ABC):
             "alert_type": alert_type,
             "emoji": emoji,
             "color": color,
+            "source_type": source_type,
+            "source_details": source_details,
         }
 
     def is_enabled(self) -> bool:

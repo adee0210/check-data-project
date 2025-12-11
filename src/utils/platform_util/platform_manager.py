@@ -137,6 +137,7 @@ class PlatformManager:
         alert_level: str = "warning",
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
+        source_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, bool]:
         """
         Gửi alert đến TẤT CẢ primary platforms
@@ -151,6 +152,14 @@ class PlatformManager:
             alert_level: Mức độ alert ("info", "warning", "error")
             error_message: Message mô tả lỗi
             error_type: Loại lỗi ("API", "Database", etc.)
+            source_info: Dict chứa thông tin nguồn {
+                "type": "API"|"DATABASE"|"DISK",
+                "url": "..." (nếu API),
+                "database": "..." (nếu DATABASE),
+                "collection": "..." (nếu MongoDB),
+                "table": "..." (nếu PostgreSQL),
+                "file_path": "..." (nếu DISK)
+            }
 
         Returns:
             Dict {platform_name: success_status}
@@ -180,6 +189,7 @@ class PlatformManager:
                     alert_level,
                     error_message,
                     error_type,
+                    source_info,
                 )
                 results[platform_name] = success
 

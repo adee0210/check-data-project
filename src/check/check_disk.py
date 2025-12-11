@@ -251,6 +251,9 @@ class CheckDisk:
                             should_send_alert = True
 
                     if should_send_alert:
+                        # Build source_info với file path
+                        source_info = {"type": "DISK", "file_path": file_path}
+
                         self.platform_util.send_alert(
                             api_name=disk_name,
                             symbol=symbol,
@@ -261,6 +264,7 @@ class CheckDisk:
                             alert_level="error",
                             error_message=error_message,
                             error_type=error_type,
+                            source_info=source_info,
                         )
                         self.last_alert_times[display_name] = current_time
 
@@ -359,6 +363,9 @@ class CheckDisk:
                         else:
                             context_message = "File không cập nhật"
 
+                        # Build source_info với file path
+                        source_info = {"type": "DISK", "file_path": file_path}
+
                         # Gửi cảnh báo lên platform
                         self.platform_util.send_alert(
                             api_name=disk_name,
@@ -371,6 +378,7 @@ class CheckDisk:
                                 "warning" if not is_suspected_holiday else "info"
                             ),
                             error_message=context_message,
+                            source_info=source_info,
                         )
                         # Cập nhật thời gian alert cuối
                         self.last_alert_times[display_name] = current_time
@@ -410,6 +418,9 @@ class CheckDisk:
                 )
 
                 if should_send_alert:
+                    # Build source_info với file path
+                    source_info = {"type": "DISK", "file_path": file_path}
+
                     self.platform_util.send_alert(
                         api_name=disk_name,
                         symbol=symbol,
@@ -420,6 +431,7 @@ class CheckDisk:
                         alert_level="error",
                         error_message=error_message,
                         error_type="SYSTEM",
+                        source_info=source_info,
                     )
                     self.last_alert_times[display_name] = current_time
 

@@ -5,9 +5,9 @@
             "is_primary": true
         },
         "telegram": {
-            "bot_token": "",
-            "chat_id": "",
-            "is_primary": false
+            "bot_token": "8374471894:AAFAb5-f4F9-R5lRmOA41fssQShLfR9SEnE",
+            "chat_id": "6612930388",
+            "is_primary": true
         }
     },
     "POSTGRE_CONFIG": {

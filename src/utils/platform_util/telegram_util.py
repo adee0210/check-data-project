@@ -45,6 +45,7 @@ class TelegramNotifier(BasePlatformNotifier):
         alert_level: str = "warning",
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
+        source_info: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Gửi alert đến Telegram qua Bot API
@@ -73,6 +74,7 @@ class TelegramNotifier(BasePlatformNotifier):
             alert_level,
             error_message,
             error_type,
+            source_info,
         )
 
         # Format Telegram message
@@ -116,20 +118,30 @@ class TelegramNotifier(BasePlatformNotifier):
         Returns:
             Formatted Markdown string
         """
-        symbol_line = f"*Symbol:* {data['symbol']}\n" if data["symbol"] else ""
-
-        message = (
-            f"{data['emoji']} *{data['api_name'].upper()} - {data['alert_type']}*\n\n"
-            f"*Thời gian:* {data['current_time']}\n"
-            f"{symbol_line}"
-            f"*Nội dung:* {data['error_message']}\n"
-            f"*Dữ liệu cũ:* {data['total_time_formatted']}\n"
-            f"*Ngưỡng cho phép:* {data['allow_delay_formatted']}\n"
-            f"*Tần suất kiểm tra:* {data['check_frequency']} giây\n"
+        # Build message với source_details sau Thời gian
+        message_parts = [
+            f"{data['emoji']} *{data['alert_type']}*\n",
+            f"*Thời gian:* {data['current_time']}"
+        ]
+        
+        # Thêm source details ngay sau thời gian nếu có
+        if data.get("source_details"):
+            message_parts.append(f"*{data['source_details']}*")
+        
+        # Thêm symbol nếu có
+        if data["symbol"]:
+            message_parts.append(f"*Symbol:* {data['symbol']}")
+        
+        # Thêm các field còn lại
+        message_parts.extend([
+            f"*Nội dung:* {data['error_message']}",
+            f"*Dữ liệu cũ:* {data['total_time_formatted']}",
+            f"*Ngưỡng cho phép:* {data['allow_delay_formatted']}",
+            f"*Tần suất kiểm tra:* {data['check_frequency']} giây",
             f"*Thời gian gửi message tiếp theo (nếu còn lỗi):* {data['next_time']}"
-        )
-
-        return message
+        ])
+        
+        message = "\n".join(message_parts)        return message
 
     def send_holiday_alert(self, message: str) -> bool:
         """

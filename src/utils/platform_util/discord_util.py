@@ -47,6 +47,7 @@ class DiscordNotifier(BasePlatformNotifier):
         alert_level: str = "warning",
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
+        source_info: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Gửi alert đến Discord qua webhook
@@ -74,6 +75,7 @@ class DiscordNotifier(BasePlatformNotifier):
             alert_level,
             error_message,
             error_type,
+            source_info,
         )
 
         # Format Discord embed
@@ -108,20 +110,28 @@ class DiscordNotifier(BasePlatformNotifier):
         Returns:
             Discord embed dict
         """
-        symbol_field = f"**Symbol:** {data['symbol']}\n" if data["symbol"] else ""
-
-        description = (
-            f"**Thời gian:** {data['current_time']}\n"
-            f"{symbol_field}"
-            f"**Nội dung:** {data['error_message']}\n"
-            f"**Dữ liệu cũ:** {data['total_time_formatted']}\n"
-            f"**Ngưỡng cho phép:** {data['allow_delay_formatted']}\n"
-            f"**Tần suất kiểm tra:** {data['check_frequency']} giây\n"
+        # Build description với source_details sau Thời gian
+        description_parts = [f"**Thời gian:** {data['current_time']}"]
+        
+        # Thêm source details ngay sau thời gian nếu có
+        if data.get("source_details"):
+            description_parts.append(f"**{data['source_details']}**")
+        
+        # Thêm symbol nếu có
+        if data["symbol"]:
+            description_parts.append(f"**Symbol:** {data['symbol']}")
+        
+        # Thêm các field còn lại
+        description_parts.extend([
+            f"**Nội dung:** {data['error_message']}",
+            f"**Dữ liệu cũ:** {data['total_time_formatted']}",
+            f"**Ngưỡng cho phép:** {data['allow_delay_formatted']}",
+            f"**Tần suất kiểm tra:** {data['check_frequency']} giây",
             f"**Thời gian gửi message tiếp theo (nếu còn lỗi):** {data['next_time']}"
-        )
-
-        embed = {
-            "title": f"{data['emoji']} {data['api_name'].upper()} - {data['alert_type']}",
+        ])
+        
+        description = "\n".join(description_parts)        embed = {
+            "title": f"{data['emoji']} {data['alert_type']}",
             "description": description,
             "color": data["color"],
             "footer": {"text": "Data Monitoring System"},

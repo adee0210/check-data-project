@@ -153,6 +153,18 @@ class CheckDatabase:
                             should_send_alert = True
 
                     if should_send_alert:
+                        # Build source_info với database connection details
+                        db_cfg = db_config.get("database", {})
+                        source_info = {"type": "DATABASE"}
+
+                        if "database_name" in db_cfg:
+                            source_info["database"] = db_cfg["database_name"]
+
+                        if "collection" in db_cfg:
+                            source_info["collection"] = db_cfg["collection"]
+                        elif "table" in db_cfg:
+                            source_info["table"] = db_cfg["table"]
+
                         self.platform_util.send_alert(
                             api_name=db_name,
                             symbol=symbol,
@@ -163,6 +175,7 @@ class CheckDatabase:
                             alert_level="error",
                             error_message=error_message,
                             error_type=error_type,
+                            source_info=source_info,
                         )
                         self.last_alert_times[display_name] = current_time
 
@@ -267,7 +280,20 @@ class CheckDatabase:
                             context_message = "Dữ liệu database quá hạn"
                             alert_level = "warning"
 
-                        self.platform_util.send_alert(
+                        # Build source_info với database connection details
+                        db_cfg = db_config.get("database", {})
+                        source_info = {"type": "DATABASE"}
+                        
+                        if "type" in db_cfg:
+                            source_info["database_type"] = db_cfg["type"]  # mongodb hoặc postgresql
+                        
+                        if "database_name" in db_cfg:
+                            source_info["database"] = db_cfg["database_name"]
+                        
+                        if "collection" in db_cfg:
+                            source_info["collection"] = db_cfg["collection"]
+                        elif "table" in db_cfg:
+                            source_info["table"] = db_cfg["table"]                        self.platform_util.send_alert(
                             api_name=db_name,
                             symbol=symbol,
                             overdue_seconds=overdue_seconds,
@@ -276,6 +302,7 @@ class CheckDatabase:
                             alert_frequency=alert_frequency,
                             alert_level=alert_level,
                             error_message=context_message,
+                            source_info=source_info,
                         )
                         self.last_alert_times[display_name] = current_time
                         self.logger_db.info(

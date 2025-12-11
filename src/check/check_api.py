@@ -67,6 +67,7 @@ class CheckAPI:
         uri = api_cfg.get("url")
         record_pointer = api_cfg.get("record_pointer", 0)
         column_to_check = api_cfg.get("column_to_check", "datetime")
+        data_wrapper = api_cfg.get("data_wrapper", "data")  # Tên key chứa array data
 
         timezone_offset = check_cfg.get("timezone_offset", 7)
         allow_delay = check_cfg.get("allow_delay", 60)
@@ -113,19 +114,26 @@ class CheckAPI:
 
                 data = r.json()
 
-                # Kiểm tra cấu trúc dữ liệu
-                if "data" not in data:
-                    raise KeyError("Response không có key 'data'")
+                # Kiểm tra cấu trúc dữ liệu - support custom data_wrapper
+                if data_wrapper not in data:
+                    raise KeyError(f"Response không có key '{data_wrapper}'")
 
-                if not isinstance(data["data"], list) or len(data["data"]) == 0:
-                    raise IndexError("Mảng 'data' rỗng hoặc không phải list")
+                data_array = data[data_wrapper]
+                if not isinstance(data_array, list) or len(data_array) == 0:
+                    raise IndexError(f"Mảng '{data_wrapper}' rỗng hoặc không phải list")
 
-                if record_pointer >= len(data["data"]):
+                # Handle nested array [[...]] - flatten to [...]
+                if isinstance(data_array[0], list):
+                    data_array = data_array[0]
+                    if not isinstance(data_array, list) or len(data_array) == 0:
+                        raise IndexError(f"Nested array trong '{data_wrapper}' rỗng")
+
+                if record_pointer >= len(data_array):
                     raise IndexError(
-                        f"record_pointer {record_pointer} vượt quá độ dài mảng {len(data['data'])}"
+                        f"record_pointer {record_pointer} vượt quá độ dài mảng {len(data_array)}"
                     )
 
-                record_pointer_data_with_column_to_check = data["data"][record_pointer][
+                record_pointer_data_with_column_to_check = data_array[record_pointer][
                     column_to_check
                 ]
 
@@ -172,6 +180,9 @@ class CheckAPI:
                         should_send_alert = True
 
                 if should_send_alert:
+                    # Build source_info với API URL
+                    source_info = {"type": "API", "url": uri}
+
                     self.platform_util.send_alert(
                         api_name=api_name,
                         symbol=symbol,
@@ -182,6 +193,7 @@ class CheckAPI:
                         alert_level="error",
                         error_message=error_message,
                         error_type=error_type,
+                        source_info=source_info,
                     )
                     self.last_alert_times[display_name] = current_time
 
@@ -299,6 +311,9 @@ class CheckAPI:
                     else:
                         context_message = "Dữ liệu quá hạn"
 
+                    # Build source_info với API URL
+                    source_info = {"type": "API", "url": uri}
+
                     # Gửi cảnh báo lên platform
                     self.platform_util.send_alert(
                         api_name=api_name,
@@ -309,6 +324,7 @@ class CheckAPI:
                         alert_frequency=alert_frequency,
                         alert_level="warning" if not is_suspected_holiday else "info",
                         error_message=context_message,
+                        source_info=source_info,
                     )
                     # Cập nhật thời gian alert cuối
                     self.last_alert_times[display_name] = current_time
