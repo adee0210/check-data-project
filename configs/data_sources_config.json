@@ -22,9 +22,9 @@
         "check": {
             "timezone_offset": 7,
             "allow_delay": 60,
-            "check_frequency": 30,
+            "check_frequency": 10,
             "alert_frequency": 60,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": [
@@ -59,10 +59,10 @@
         },
         "check": {
             "timezone_offset": 0,
-            "allow_delay": 900,
+            "allow_delay": 1800,
             "check_frequency": 60,
             "alert_frequency": 60,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": null,
@@ -94,7 +94,7 @@
             "allow_delay": 1800,
             "check_frequency": 300,
             "alert_frequency": 300,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": [
@@ -168,7 +168,7 @@
             "allow_delay": 10,
             "check_frequency": 30,
             "alert_frequency": 60,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": [
@@ -210,7 +210,7 @@
             "allow_delay": 30,
             "check_frequency": 10,
             "alert_frequency": 60,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": [
@@ -252,7 +252,7 @@
             "allow_delay": 86400,
             "check_frequency": 10,
             "alert_frequency": 60,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": [
@@ -270,9 +270,6 @@
         }
     },
     "tygia": {
-        "api": {
-            "enable": false
-        },
         "database": {
             "enable": true,
             "type": "postgresql",
@@ -331,7 +328,7 @@
             "allow_delay": 120,
             "check_frequency": 10,
             "alert_frequency": 60,
-            "max_stale_days": 3
+            "max_stale_days": 7
         },
         "schedule": {
             "valid_days": [

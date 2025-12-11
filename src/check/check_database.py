@@ -157,13 +157,18 @@ class CheckDatabase:
                         db_cfg = db_config.get("database", {})
                         source_info = {"type": "DATABASE"}
 
-                        if "database_name" in db_cfg:
-                            source_info["database"] = db_cfg["database_name"]
+                        if "type" in db_cfg:
+                            source_info["database_type"] = db_cfg[
+                                "type"
+                            ]  # mongodb hoặc postgresql
 
-                        if "collection" in db_cfg:
-                            source_info["collection"] = db_cfg["collection"]
-                        elif "table" in db_cfg:
-                            source_info["table"] = db_cfg["table"]
+                        if "database" in db_cfg:
+                            source_info["database"] = db_cfg["database"]
+
+                        if "collection_name" in db_cfg:
+                            source_info["collection"] = db_cfg["collection_name"]
+                        elif "table_name" in db_cfg:
+                            source_info["table"] = db_cfg["table_name"]
 
                         self.platform_util.send_alert(
                             api_name=db_name,
@@ -289,13 +294,13 @@ class CheckDatabase:
                                 "type"
                             ]  # mongodb hoặc postgresql
 
-                        if "database_name" in db_cfg:
-                            source_info["database"] = db_cfg["database_name"]
+                        if "database" in db_cfg:
+                            source_info["database"] = db_cfg["database"]
 
-                        if "collection" in db_cfg:
-                            source_info["collection"] = db_cfg["collection"]
-                        elif "table" in db_cfg:
-                            source_info["table"] = db_cfg["table"]
+                        if "collection_name" in db_cfg:
+                            source_info["collection"] = db_cfg["collection_name"]
+                        elif "table_name" in db_cfg:
+                            source_info["table"] = db_cfg["table_name"]
 
                         self.platform_util.send_alert(
                             api_name=db_name,
