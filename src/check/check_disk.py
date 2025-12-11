@@ -134,32 +134,44 @@ class CheckDisk:
             disk_config: Dict cấu hình disk check
             symbol: Optional symbol cho dynamic path
         """
-        # Đọc config từ cấu trúc mới
-        disk_cfg = disk_config.get("disk", {})
-        check_cfg = disk_config.get("check", {})
-        schedule_cfg = disk_config.get("schedule", {})
-
-        file_path = disk_cfg.get("file_path")
-        file_type = disk_cfg.get("file_type", "mtime")  # json, csv, txt, hoặc mtime
-        record_pointer = disk_cfg.get("record_pointer", 0)  # 0 = mới nhất, -1 = cũ nhất
-        column_to_check = disk_cfg.get("column_to_check", "datetime")
-
-        timezone_offset = check_cfg.get("timezone_offset", 7)
-        allow_delay = check_cfg.get("allow_delay", 60)
-        alert_frequency = check_cfg.get("alert_frequency", 60)
-        check_frequency = check_cfg.get("check_frequency", 10)
-        max_stale_days = check_cfg.get("max_stale_days", None)
-
-        valid_schedule = schedule_cfg
-
+        # Tạo display name trước
         if symbol:
-            file_path = file_path.format(symbol=symbol)
             display_name = f"{disk_name}-{symbol}"
         else:
             display_name = disk_name
 
         while True:
             try:
+                # Reload config mỗi lần loop để nhận config mới
+                # (LoadConfigUtil có cache, chỉ reload khi file thay đổi)
+                all_config = self._load_config()
+                disk_config = all_config.get(disk_name, disk_config)
+
+                # Đọc config từ cấu trúc mới
+                disk_cfg = disk_config.get("disk", {})
+                check_cfg = disk_config.get("check", {})
+                schedule_cfg = disk_config.get("schedule", {})
+
+                file_path = disk_cfg.get("file_path")
+                file_type = disk_cfg.get(
+                    "file_type", "mtime"
+                )  # json, csv, txt, hoặc mtime
+                record_pointer = disk_cfg.get(
+                    "record_pointer", 0
+                )  # 0 = mới nhất, -1 = cũ nhất
+                column_to_check = disk_cfg.get("column_to_check", "datetime")
+
+                timezone_offset = check_cfg.get("timezone_offset", 7)
+                allow_delay = check_cfg.get("allow_delay", 60)
+                alert_frequency = check_cfg.get("alert_frequency", 60)
+                check_frequency = check_cfg.get("check_frequency", 10)
+                max_stale_days = check_cfg.get("max_stale_days", None)
+
+                valid_schedule = schedule_cfg
+
+                if symbol:
+                    file_path = file_path.format(symbol=symbol)
+
                 # Kiểm tra valid_schedule
                 is_within_schedule = TimeValidator.is_within_valid_schedule(
                     valid_schedule, timezone_offset

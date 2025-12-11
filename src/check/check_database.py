@@ -61,19 +61,6 @@ class CheckDatabase:
             db_config: Dict cấu hình database
             symbol: Optional symbol để filter
         """
-        # Đọc config từ cấu trúc mới
-        check_cfg = db_config.get("check", {})
-        schedule_cfg = db_config.get("schedule", {})
-
-        timezone_offset = check_cfg.get("timezone_offset", 7)
-        allow_delay = check_cfg.get("allow_delay", 60)
-        alert_frequency = check_cfg.get("alert_frequency", 60)
-        check_frequency = check_cfg.get("check_frequency", 10)
-        max_stale_days = check_cfg.get("max_stale_days", None)
-
-        valid_schedule = schedule_cfg
-        holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
-
         # Tạo display name
         if symbol:
             display_name = f"{db_name}-{symbol}"
@@ -82,6 +69,24 @@ class CheckDatabase:
 
         while True:
             try:
+                # Reload config mỗi lần loop để nhận config mới
+                # (LoadConfigUtil có cache, chỉ reload khi file thay đổi)
+                all_config = self._load_config()
+                db_config = all_config.get(db_name, db_config)
+
+                # Đọc config từ cấu trúc mới
+                check_cfg = db_config.get("check", {})
+                schedule_cfg = db_config.get("schedule", {})
+
+                timezone_offset = check_cfg.get("timezone_offset", 7)
+                allow_delay = check_cfg.get("allow_delay", 60)
+                alert_frequency = check_cfg.get("alert_frequency", 60)
+                check_frequency = check_cfg.get("check_frequency", 10)
+                max_stale_days = check_cfg.get("max_stale_days", None)
+
+                valid_schedule = schedule_cfg
+                holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
+
                 # Kiểm tra valid_schedule
                 is_within_schedule = TimeValidator.is_within_valid_schedule(
                     valid_schedule, timezone_offset

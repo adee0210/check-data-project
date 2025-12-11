@@ -58,33 +58,43 @@ class CheckAPI:
             api_config: Dict cấu hình API
             symbol: Optional symbol để filter
         """
-        # Đọc config từ cấu trúc mới
-        api_cfg = api_config.get("api", {})
-        check_cfg = api_config.get("check", {})
-        schedule_cfg = api_config.get("schedule", {})
-        symbols_cfg = api_config.get("symbols", {})
-
-        uri = api_cfg.get("url")
-        record_pointer = api_cfg.get("record_pointer", 0)
-        column_to_check = api_cfg.get("column_to_check", "datetime")
-        data_wrapper = api_cfg.get("data_wrapper", "data")  # Tên key chứa array data
-
-        timezone_offset = check_cfg.get("timezone_offset", 7)
-        allow_delay = check_cfg.get("allow_delay", 60)
-        alert_frequency = check_cfg.get("alert_frequency", 60)
-        check_frequency = check_cfg.get("check_frequency", 10)
-        max_stale_days = check_cfg.get("max_stale_days", None)
-
-        valid_schedule = schedule_cfg
-        holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
-
+        # Tạo display name trước
         if symbol:
-            uri = uri.format(symbol=symbol)
             display_name = f"{api_name}-{symbol}"
         else:
             display_name = api_name
 
         while True:
+            # Reload config mỗi lần loop để nhận config mới
+            # (LoadConfigUtil có cache, chỉ reload khi file thay đổi)
+            all_config = self._load_config()
+            api_config = all_config.get(api_name, api_config)
+
+            # Đọc config từ cấu trúc mới
+            api_cfg = api_config.get("api", {})
+            check_cfg = api_config.get("check", {})
+            schedule_cfg = api_config.get("schedule", {})
+            symbols_cfg = api_config.get("symbols", {})
+
+            uri = api_cfg.get("url")
+            record_pointer = api_cfg.get("record_pointer", 0)
+            column_to_check = api_cfg.get("column_to_check", "datetime")
+            data_wrapper = api_cfg.get(
+                "data_wrapper", "data"
+            )  # Tên key chứa array data
+
+            timezone_offset = check_cfg.get("timezone_offset", 7)
+            allow_delay = check_cfg.get("allow_delay", 60)
+            alert_frequency = check_cfg.get("alert_frequency", 60)
+            check_frequency = check_cfg.get("check_frequency", 10)
+            max_stale_days = check_cfg.get("max_stale_days", None)
+
+            valid_schedule = schedule_cfg
+            holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
+
+            if symbol:
+                uri = uri.format(symbol=symbol)
+
             # Kiểm tra valid_schedule: chỉ check trong khoảng thời gian và ngày được phép
             is_within_schedule = TimeValidator.is_within_valid_schedule(
                 valid_schedule, timezone_offset
