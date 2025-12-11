@@ -108,13 +108,15 @@ class BasePlatformNotifier(ABC):
         Get emoji và color code theo alert level
 
         Args:
-            alert_level: "warning" hoặc "error"
+            alert_level: "info", "warning" hoặc "error"
 
         Returns:
             Tuple (emoji, color_code)
         """
         if alert_level == "error":
             return "🔴", 0xFF0000  # Red
+        elif alert_level == "info":
+            return "🟢", 0x00FF00  # Green
         else:  # warning
             return "🟠", 0xFFA500  # Orange
 
@@ -173,6 +175,8 @@ class BasePlatformNotifier(ABC):
                         source_details = f"Type: {db_type}\nDatabase: {db}"
             elif source_type == "DISK" and "file_path" in source_info:
                 source_details = f"File: {source_info['file_path']}"
+            elif source_type == "SYSTEM" and "message" in source_info:
+                source_details = f"System: {source_info['message']}"
 
         # Determine alert type text with source type
         if source_type:
