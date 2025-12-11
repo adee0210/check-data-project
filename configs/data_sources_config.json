@@ -21,7 +21,7 @@
         },
         "check": {
             "timezone_offset": 7,
-            "allow_delay": 60,
+            "allow_delay": 120,
             "check_frequency": 10,
             "alert_frequency": 60,
             "max_stale_days": 7
@@ -93,7 +93,7 @@
             "timezone_offset": 0,
             "allow_delay": 1800,
             "check_frequency": 300,
-            "alert_frequency": 300,
+            "alert_frequency": 60,
             "max_stale_days": 7
         },
         "schedule": {
