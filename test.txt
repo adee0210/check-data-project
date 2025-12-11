@@ -1,0 +1,33 @@
+"vn100_31": {
+        "api": {
+            "enable": true,
+            "url": "http://192.168.110.31/ckvn/vn100?days=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 120,
+            "check_frequency": 10,
+            "alert_frequency": 60,
+            "max_stale_days": 3
+        },
+        "schedule": {
+            "valid_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "time_ranges": [
+                "9:00-11:30",
+                "13:00-14:30"
+            ]
+        }
+    },

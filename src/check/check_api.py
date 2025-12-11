@@ -85,7 +85,9 @@ class CheckAPI:
 
         while True:
             # Kiểm tra valid_schedule: chỉ check trong khoảng thời gian và ngày được phép
-            is_within_schedule = TimeValidator.is_within_valid_schedule(valid_schedule)
+            is_within_schedule = TimeValidator.is_within_valid_schedule(
+                valid_schedule, timezone_offset
+            )
 
             if not is_within_schedule:
                 # Chỉ log 1 lần khi vào trạng thái ngoài giờ

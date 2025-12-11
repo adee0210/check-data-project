@@ -140,25 +140,14 @@ class MongoDBConnector(BaseDatabaseConnector):
             if doc and column_to_check in doc:
                 latest_time = doc[column_to_check]
 
-                # Convert to datetime if needed
-                if isinstance(latest_time, datetime):
-                    return latest_time
-                elif isinstance(latest_time, str):
-                    # Xử lý string datetime
-                    from utils.convert_datetime_util import ConvertDatetimeUtil
+                # Sử dụng ConvertDatetimeUtil để handle tất cả các type
+                from utils.convert_datetime_util import ConvertDatetimeUtil
 
-                    converted = ConvertDatetimeUtil.convert_str_to_datetime(latest_time)
-                    if converted:
-                        return converted
-                    else:
-                        raise ValueError(
-                            f"Không thể parse string datetime: {latest_time}"
-                        )
-                elif isinstance(latest_time, (int, float)):
-                    return datetime.fromtimestamp(latest_time)
-                else:
+                try:
+                    return ConvertDatetimeUtil.convert_str_to_datetime(latest_time)
+                except ValueError as e:
                     raise ValueError(
-                        f"Không thể convert {type(latest_time)} thành datetime"
+                        f"Không thể convert {type(latest_time)} ({latest_time}) thành datetime: {e}"
                     )
             else:
                 raise ValueError("Query không trả về kết quả")

@@ -26,33 +26,91 @@ class ConvertDatetimeUtil:
     @staticmethod
     def convert_str_to_datetime(datetime_str):
         """
-        Chuyển đổi string hoặc datetime object thành datetime object
+        Chuyển đổi string, date, hoặc datetime object thành datetime object
+
+        Hỗ trợ:
+        - datetime.datetime object (trả về luôn)
+        - datetime.date object (convert sang datetime với time 00:00:00)
+        - String ISO format: "2025-12-04T14:30:00", "2025-12-04T14:30:00Z"
+        - String datetime: "2025-12-04 14:30:00"
+        - String date: "2025-12-04"
+        - Unix timestamp (int/float)
 
         Args:
-            datetime_str: String hoặc datetime object
-                         Hỗ trợ các format:
-                         - "2025-12-04 14:30:00" (datetime đầy đủ)
-                         - "2025-12-04" (chỉ ngày, giờ mặc định 00:00:00)
+            datetime_str: String, date, datetime object, hoặc timestamp
 
         Returns:
-            datetime object hoặc None nếu lỗi
+            datetime object hoặc raise ValueError nếu không parse được
         """
+        # Nếu là None, raise error
+        if datetime_str is None:
+            raise ValueError("datetime_str không được None")
+
         # Nếu đã là datetime object, trả về luôn
         if isinstance(datetime_str, datetime.datetime):
             return datetime_str
 
-        # Nếu là string, parse theo format
-        try:
-            # Thử parse format đầy đủ "YYYY-MM-DD HH:MM:SS"
-            return datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
+        # Nếu là datetime.date (PostgreSQL thường trả về kiểu này)
+        if isinstance(datetime_str, datetime.date):
+            # Convert date sang datetime với time 00:00:00
+            return datetime.datetime.combine(datetime_str, datetime.time.min)
+
+        # Nếu là số (timestamp)
+        if isinstance(datetime_str, (int, float)):
             try:
-                # Thử parse format chỉ ngày "YYYY-MM-DD"
+                return datetime.datetime.fromtimestamp(datetime_str)
+            except (ValueError, OSError) as e:
+                raise ValueError(f"Không thể convert timestamp {datetime_str}: {e}")
+
+        # Nếu là string, thử parse theo nhiều format
+        if isinstance(datetime_str, str):
+            # Loại bỏ whitespace
+            datetime_str = datetime_str.strip()
+
+            # Thử ISO format với Z
+            if "T" in datetime_str:
+                try:
+                    return datetime.datetime.fromisoformat(
+                        datetime_str.replace("Z", "+00:00").replace("z", "+00:00")
+                    )
+                except ValueError:
+                    pass
+
+            # Thử format đầy đủ "YYYY-MM-DD HH:MM:SS"
+            try:
+                return datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
+
+            # Thử format với microseconds "YYYY-MM-DD HH:MM:SS.ffffff"
+            try:
+                return datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S.%f")
+            except ValueError:
+                pass
+
+            # Thử format chỉ ngày "YYYY-MM-DD"
+            try:
                 return datetime.datetime.strptime(datetime_str, "%Y-%m-%d")
-            except ValueError as e:
-                print(f"Lỗi convert datetime: {e}")
-                print(f"String nhận được: {datetime_str}")
-                return None
+            except ValueError:
+                pass
+
+            # Thử format DD/MM/YYYY
+            try:
+                return datetime.datetime.strptime(datetime_str, "%d/%m/%Y")
+            except ValueError:
+                pass
+
+            # Thử format DD/MM/YYYY HH:MM:SS
+            try:
+                return datetime.datetime.strptime(datetime_str, "%d/%m/%Y %H:%M:%S")
+            except ValueError:
+                pass
+
+        # Nếu không parse được, raise error với thông tin chi tiết
+        raise ValueError(
+            f"Không thể convert thành datetime. "
+            f"Type: {type(datetime_str)}, Value: {datetime_str}"
+        )
 
     @staticmethod
     def convert_utc_to_local(utc_datetime, timezone_offset=7):

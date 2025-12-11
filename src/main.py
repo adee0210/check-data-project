@@ -31,6 +31,28 @@ from check.check_disk import CheckDisk
 
 
 import asyncio
+import logging
+import signal
+import sys
+
+
+# Setup logging
+logging_config_path = project_root / "configs" / "logging_config.py"
+exec(open(logging_config_path).read())
+logger = logging.getLogger("MainProcess")
+
+
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info("=" * 80)
+    logger.info("🛑 Nhận tín hiệu dừng hệ thống - Đang tắt giám sát...")
+    logger.info("=" * 80)
+    sys.exit(0)
+
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 async def main():
@@ -42,6 +64,10 @@ async def main():
     - Database monitoring (check_database)
     - Disk monitoring (check_disk) - optional
     """
+    logger.info("=" * 80)
+    logger.info("🚀 BẮT ĐẦU HỆ THỐNG GIÁM SÁT DỮ LIỆU")
+    logger.info("=" * 80)
+
     # Khởi tạo API checker
     api_checker = CheckAPI()
 
@@ -51,12 +77,19 @@ async def main():
     # Khởi tạo Disk checker (tùy chọn)
     disk_checker = CheckDisk()
 
-    # Chạy tất cả tasks song song
-    await asyncio.gather(
-        api_checker.run_api_tasks(),
-        db_checker.run_database_tasks(),
-        disk_checker.run_disk_tasks(),
-    )
+    try:
+        # Chạy tất cả tasks song song
+        await asyncio.gather(
+            api_checker.run_api_tasks(),
+            db_checker.run_database_tasks(),
+            disk_checker.run_disk_tasks(),
+        )
+    except Exception as e:
+        logger.error(f"❌ LỖI NGHIÊM TRỌNG trong main: {e}", exc_info=True)
+    finally:
+        logger.info("=" * 80)
+        logger.info("🛑 DỪNG HỆ THỐNG GIÁM SÁT DỮ LIỆU")
+        logger.info("=" * 80)
 
 
 if __name__ == "__main__":
