@@ -283,17 +283,21 @@ class CheckDatabase:
                         # Build source_info với database connection details
                         db_cfg = db_config.get("database", {})
                         source_info = {"type": "DATABASE"}
-                        
+
                         if "type" in db_cfg:
-                            source_info["database_type"] = db_cfg["type"]  # mongodb hoặc postgresql
-                        
+                            source_info["database_type"] = db_cfg[
+                                "type"
+                            ]  # mongodb hoặc postgresql
+
                         if "database_name" in db_cfg:
                             source_info["database"] = db_cfg["database_name"]
-                        
+
                         if "collection" in db_cfg:
                             source_info["collection"] = db_cfg["collection"]
                         elif "table" in db_cfg:
-                            source_info["table"] = db_cfg["table"]                        self.platform_util.send_alert(
+                            source_info["table"] = db_cfg["table"]
+
+                        self.platform_util.send_alert(
                             api_name=db_name,
                             symbol=symbol,
                             overdue_seconds=overdue_seconds,

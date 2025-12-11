@@ -121,27 +121,31 @@ class TelegramNotifier(BasePlatformNotifier):
         # Build message với source_details sau Thời gian
         message_parts = [
             f"{data['emoji']} *{data['alert_type']}*\n",
-            f"*Thời gian:* {data['current_time']}"
+            f"*Thời gian:* {data['current_time']}",
         ]
-        
+
         # Thêm source details ngay sau thời gian nếu có
         if data.get("source_details"):
             message_parts.append(f"*{data['source_details']}*")
-        
+
         # Thêm symbol nếu có
         if data["symbol"]:
             message_parts.append(f"*Symbol:* {data['symbol']}")
-        
+
         # Thêm các field còn lại
-        message_parts.extend([
-            f"*Nội dung:* {data['error_message']}",
-            f"*Dữ liệu cũ:* {data['total_time_formatted']}",
-            f"*Ngưỡng cho phép:* {data['allow_delay_formatted']}",
-            f"*Tần suất kiểm tra:* {data['check_frequency']} giây",
-            f"*Thời gian gửi message tiếp theo (nếu còn lỗi):* {data['next_time']}"
-        ])
-        
-        message = "\n".join(message_parts)        return message
+        message_parts.extend(
+            [
+                f"*Nội dung:* {data['error_message']}",
+                f"*Dữ liệu cũ:* {data['total_time_formatted']}",
+                f"*Ngưỡng cho phép:* {data['allow_delay_formatted']}",
+                f"*Tần suất kiểm tra:* {data['check_frequency']} giây",
+                f"*Thời gian gửi message tiếp theo (nếu còn lỗi):* {data['next_time']}",
+            ]
+        )
+
+        message = "\n".join(message_parts)
+
+        return message
 
     def send_holiday_alert(self, message: str) -> bool:
         """
