@@ -1,6 +1,7 @@
 import glob
 import json
 import os
+from configs.logging_config import LoggerConfig
 
 
 class LoadConfigUtil:
@@ -8,6 +9,14 @@ class LoadConfigUtil:
 
     _cache = {}
     _last_modified = {}
+    _logger = None
+
+    @staticmethod
+    def _get_logger():
+        """Lazy load logger"""
+        if LoadConfigUtil._logger is None:
+            LoadConfigUtil._logger = LoggerConfig.logger_config("LoadConfigUtil")
+        return LoadConfigUtil._logger
 
     @staticmethod
     def load_json_to_variable(filename, config_type=None):
@@ -32,10 +41,17 @@ class LoadConfigUtil:
         current_mtime = os.path.getmtime(file_path)
         cache_key = f"{file_path}:{config_type}" if config_type else file_path
 
+        # Check if cache exists and file hasn't changed
         if cache_key in LoadConfigUtil._cache:
             if LoadConfigUtil._last_modified.get(cache_key) == current_mtime:
                 # File không thay đổi, dùng cache
                 return LoadConfigUtil._cache[cache_key]
+            else:
+                # File đã thay đổi, log reload
+                logger = LoadConfigUtil._get_logger()
+                logger.info(
+                    f"Phát hiện thay đổi config file: {filename}, đang reload..."
+                )
 
         # Load file mới hoặc file đã thay đổi
         with open(file=file_path, mode="r", encoding="utf-8") as f:
@@ -53,6 +69,16 @@ class LoadConfigUtil:
         # Cache lại
         LoadConfigUtil._cache[cache_key] = result
         LoadConfigUtil._last_modified[cache_key] = current_mtime
+
+        # Log first load or reload
+        if current_mtime not in [
+            LoadConfigUtil._last_modified.get(k)
+            for k in LoadConfigUtil._cache.keys()
+            if k != cache_key
+        ]:
+            logger = LoadConfigUtil._get_logger()
+            config_desc = f" [{config_type}]" if config_type else ""
+            logger.info(f"Đã load config: {filename}{config_desc}")
 
         return result
 

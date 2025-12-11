@@ -21,7 +21,7 @@
         },
         "check": {
             "timezone_offset": 7,
-            "allow_delay": 70,
+            "allow_delay": 60,
             "check_frequency": 30,
             "alert_frequency": 60,
             "max_stale_days": 3
@@ -59,7 +59,7 @@
         },
         "check": {
             "timezone_offset": 0,
-            "allow_delay": 1800,
+            "allow_delay": 900,
             "check_frequency": 60,
             "alert_frequency": 60,
             "max_stale_days": 3
@@ -91,7 +91,7 @@
         },
         "check": {
             "timezone_offset": 0,
-            "allow_delay": 900,
+            "allow_delay": 1800,
             "check_frequency": 300,
             "alert_frequency": 300,
             "max_stale_days": 3
@@ -338,7 +338,7 @@
             ],
             "time_ranges": [
                 "9:00-11:30",
-                "13:00-14:30"
+                "13:00-15:00"
             ]
         }
     }

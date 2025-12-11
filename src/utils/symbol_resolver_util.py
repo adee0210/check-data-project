@@ -198,10 +198,18 @@ class SymbolResolverUtil:
             }
 
             # Kết nối MongoDB (reuse existing connection nếu có)
-            db = db_connector.connect(f"resolver_{database}", db_config)
-            if db is None:
+            connector = db_connector.connect(f"resolver_{database}", db_config)
+            if connector is None:
                 SymbolResolverUtil.logger.error(
                     f"Không thể kết nối MongoDB: {database}"
+                )
+                return []
+
+            # Lấy database object từ connector
+            db = connector.connection
+            if db is None:
+                SymbolResolverUtil.logger.error(
+                    f"Connector không có database connection: {database}"
                 )
                 return []
 
@@ -250,10 +258,18 @@ class SymbolResolverUtil:
             }
 
             # Kết nối PostgreSQL (reuse existing connection nếu có)
-            conn = db_connector.connect(f"resolver_{database}", db_config)
-            if conn is None:
+            connector = db_connector.connect(f"resolver_{database}", db_config)
+            if connector is None:
                 SymbolResolverUtil.logger.error(
                     f"Không thể kết nối PostgreSQL: {database}"
+                )
+                return []
+
+            # Lấy connection object từ connector
+            conn = connector.connection
+            if conn is None:
+                SymbolResolverUtil.logger.error(
+                    f"Connector không có database connection: {database}"
                 )
                 return []
 
