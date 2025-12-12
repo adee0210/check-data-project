@@ -26,6 +26,14 @@ class CheckDisk:
         # Sử dụng AlertTracker để quản lý tất cả tracking
         self.tracker = AlertTracker()
 
+        # Initialize tracking dictionaries and sets
+        self.outside_schedule_logged = {}
+        self.last_alert_times = {}
+        self.first_stale_times = {}
+        self.consecutive_stale_days = {}
+        self.max_stale_exceeded = {}
+        self.low_activity_symbols = set()
+
     def _load_config(self):
         """
         Load config từ JSON file (gọi mỗi chu kỳ check)
