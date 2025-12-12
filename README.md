@@ -103,13 +103,6 @@ Get-Content logsmain.log -Wait -Tail 100
 
 ---
 
-## 6. Muốn tôi làm thêm?
-
--   Thêm ví dụ cấu hình rút gọn
--   Thêm hướng dẫn debug webhook / mock API
--   Thêm README tiếng Anh hoặc badges CI
-
-Hãy cho biết bạn muốn tôi cập nhật thêm nội dung cụ thể nào.
 
 ---
 
