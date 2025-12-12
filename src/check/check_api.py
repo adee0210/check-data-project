@@ -248,14 +248,14 @@ class CheckAPI:
                     error_type = "API_WARNING"
                     api_error = True
 
-                    # Track empty data để phát hiện pattern và chuyển silent mode
+                    # Track empty data - chỉ gửi alert lần đầu, sau đó silent ngay
                     is_silent, duration = self.tracker.track_empty_data(
-                        display_name, silent_threshold_seconds=1800
+                        display_name, silent_threshold_seconds=0
                     )
 
                     if is_silent and duration is not None:
-                        self.logger_api.warning(
-                            f"[EMPTY_DATA] {display_name} liên tục empty data trong {int(duration/60)} phút. "
+                        self.logger_api.info(
+                            f"[EMPTY_DATA] {display_name} đã gửi alert lần đầu. "
                             f"Chuyển silent mode - chỉ log, không gửi alert nữa."
                         )
 

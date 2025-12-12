@@ -108,7 +108,7 @@ class CheckDatabase:
                     latest_time = self.db_connector.query(db_name, db_config, symbol)
 
                     if latest_time is None:
-                        raise ValueError("Không có dữ liệu")
+                        raise ValueError("EMPTY_DATA")
 
                     error_message = "Không có dữ liệu mới"
                     db_error = False
@@ -121,12 +121,34 @@ class CheckDatabase:
                         f"Lỗi Database: {error_message} cho {display_name}"
                     )
                 except ValueError as e:
-                    error_message = str(e)
-                    error_type = "DATABASE"
-                    db_error = True
-                    self.logger_db.error(
-                        f"Lỗi Database: {error_message} cho {display_name}"
-                    )
+                    error_str = str(e)
+                    # Phân biệt EMPTY_DATA vs lỗi khác
+                    if "EMPTY_DATA" in error_str:
+                        error_message = "Không có dữ liệu trong database"
+                        error_type = "DATABASE_WARNING"
+                        db_error = True
+
+                        # Track empty data - chỉ gửi alert lần đầu, sau đó silent ngay
+                        is_silent, duration = self.tracker.track_empty_data(
+                            display_name, silent_threshold_seconds=0
+                        )
+
+                        if is_silent and duration is not None:
+                            self.logger_db.info(
+                                f"[EMPTY_DATA] {display_name} đã gửi alert lần đầu. "
+                                f"Chuyển silent mode - chỉ log, không gửi alert nữa."
+                            )
+
+                        self.logger_db.warning(
+                            f"Cảnh báo Database: {error_message} cho {display_name}"
+                        )
+                    else:
+                        error_message = str(e)
+                        error_type = "DATABASE"
+                        db_error = True
+                        self.logger_db.error(
+                            f"Lỗi Database: {error_message} cho {display_name}"
+                        )
                 except Exception as e:
                     error_message = str(e)
                     error_type = "DATABASE"
@@ -138,17 +160,23 @@ class CheckDatabase:
                 if db_error:
                     # Xử lý lỗi database - gửi cảnh báo nếu cần
                     current_time = datetime.now()
-                    last_alert = self.last_alert_times.get(display_name)
 
-                    should_send_alert = False
-                    if last_alert is None:
-                        should_send_alert = True
-                    else:
-                        time_since_last_alert = (
-                            current_time - last_alert
-                        ).total_seconds()
-                        if time_since_last_alert >= alert_frequency:
-                            should_send_alert = True
+                    # Kiểm tra xem có đang trong silent mode cho EMPTY_DATA không
+                    if error_type == "DATABASE_WARNING":
+                        is_silent, _ = self.tracker.track_empty_data(
+                            display_name, silent_threshold_seconds=0
+                        )
+                        if is_silent:
+                            # Silent mode - chỉ log, không gửi alert
+                            self.logger_db.debug(
+                                f"[EMPTY_DATA SILENT] {display_name} vẫn empty data, skip alert (silent mode)"
+                            )
+                            await asyncio.sleep(check_frequency)
+                            continue
+
+                    should_send_alert = self.tracker.should_send_alert(
+                        display_name, alert_frequency
+                    )
 
                     if should_send_alert:
                         # Build source_info với database connection details
@@ -168,6 +196,12 @@ class CheckDatabase:
                         elif "table_name" in db_cfg:
                             source_info["table"] = db_cfg["table_name"]
 
+                        # Xác định alert_level dựa vào error_type
+                        if error_type == "DATABASE_WARNING":
+                            alert_level = "warning"
+                        else:
+                            alert_level = "error"
+
                         self.platform_util.send_alert(
                             api_name=db_name,
                             symbol=symbol,
@@ -175,12 +209,12 @@ class CheckDatabase:
                             allow_delay=allow_delay,
                             check_frequency=check_frequency,
                             alert_frequency=alert_frequency,
-                            alert_level="error",
+                            alert_level=alert_level,
                             error_message=error_message,
                             error_type=error_type,
                             source_info=source_info,
                         )
-                        self.last_alert_times[display_name] = current_time
+                        self.tracker.record_alert_sent(display_name)
 
                     await asyncio.sleep(check_frequency)
                     continue
@@ -205,8 +239,15 @@ class CheckDatabase:
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
+                # Reset empty_data_tracking nếu database có data trở lại
+                duration = self.tracker.reset_empty_data(display_name)
+                if duration is not None:
+                    self.logger_db.info(
+                        f"[EMPTY_DATA RESOLVED] {display_name} đã có data sau {int(duration/60)} phút empty. Reset tracking."
+                    )
+
                 # ===== EARLY CHECK: Low-activity symbol - chỉ log, không gửi alert =====
-                if display_name in self.low_activity_symbols:
+                if self.tracker.is_low_activity(display_name):
                     if is_fresh:
                         self.logger_db.info(
                             f"[LOW-ACTIVITY] {display_name} có data mới nhưng vẫn được đánh dấu low-activity, không gửi alert"
