@@ -30,6 +30,15 @@ class CheckDatabase:
         # Sử dụng AlertTracker để quản lý tất cả tracking
         self.tracker = AlertTracker()
 
+        # Tracking outside schedule logging
+        self.outside_schedule_logged = {}
+
+        # Legacy tracking dictionaries (cần migrate dần sang AlertTracker)
+        self.max_stale_exceeded = {}
+        self.last_alert_times = {}
+        self.first_stale_times = {}
+        self.consecutive_stale_days = {}
+
     def _load_config(self):
         """
         Load config từ JSON file (gọi mỗi chu kỳ check)
