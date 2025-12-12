@@ -40,6 +40,7 @@ class BasePlatformNotifier(ABC):
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
+        status_message: Optional[str] = None,
     ) -> bool:
         """
         Gửi alert message
@@ -62,6 +63,7 @@ class BasePlatformNotifier(ABC):
                 "table": "..." (nếu PostgreSQL),
                 "file_path": "..." (nếu DISK)
             }
+            status_message: Optional thông báo trạng thái đặc biệt (vd: "Data quá cũ, dừng kiểm tra")
 
         Returns:
             True nếu gửi thành công, False nếu thất bại
@@ -132,6 +134,7 @@ class BasePlatformNotifier(ABC):
         error_message: str,
         error_type: Optional[str],
         source_info: Optional[Dict[str, Any]] = None,
+        status_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Build common message data cho tất cả platforms
@@ -207,6 +210,7 @@ class BasePlatformNotifier(ABC):
             "color": color,
             "source_type": source_type,
             "source_details": source_details,
+            "status_message": status_message,
         }
 
     def is_enabled(self) -> bool:

@@ -33,9 +33,17 @@ class CheckDatabase:
         # Symbols cache ở class level để persist qua các reload
         self.symbols_cache = {}
 
-        # Track items vượt quá max_stale_seconds: {display_name: first_exceeded_time}
-        # Để chỉ log warning 1 lần và skip check
-        self.max_stale_exceeded = {}
+        # Track items vượt quá max_stale_seconds (đã gửi alert "dừng gửi thông báo")
+        self.max_stale_exceeded = {}  # {display_name: datetime}
+
+        # Track low-activity symbols (đã xác nhận giao dịch thấp - không gửi alert nữa)
+        self.low_activity_symbols = set()  # {display_name, ...}
+
+        # Track consecutive days without data (để phát hiện low-activity)
+        self.consecutive_stale_days = {}  # {display_name: (last_check_date, count)}
+
+        # Track last holiday alert date
+        self.last_holiday_alert_date = None  # Last date khi gửi alert "ngày lễ"
 
     def _load_config(self):
         """
@@ -209,101 +217,92 @@ class CheckDatabase:
                     dt_latest_time, allow_delay
                 )
 
-                # EARLY CHECK: Nếu data đã vượt quá max_stale_seconds, dừng hẳn
-                if not is_fresh and max_stale_seconds is not None:
-                    total_stale_seconds = overdue_seconds + allow_delay
+                current_time = datetime.now()
+                current_date = current_time.strftime("%Y-%m-%d")
 
-                    if total_stale_seconds > max_stale_seconds:
-                        # Chỉ log warning 1 lần rồi dừng hẳn
-                        if display_name not in self.max_stale_exceeded:
-                            self.max_stale_exceeded[display_name] = datetime.now()
-                            # Chuyển đổi giây sang định dạng dễ đọc
-                            stale_hours = total_stale_seconds / 3600
-                            max_hours = max_stale_seconds / 3600
-                            self.logger_db.warning(
-                                f"Data của {display_name} đã cũ {stale_hours:.1f} giờ (vượt ngưỡng {max_hours:.1f} giờ). "
-                                f"Dừng check và alert cho item này VỈNH VIỄN."
-                            )
-
-                        # Dừng hẳn task này
-                        return
-
-                if not is_fresh:
-                    time_str = DataValidator.format_time_overdue(
-                        overdue_seconds, allow_delay
-                    )
-                    self.logger_db.warning(
-                        f"CẢNH BÁO: Dữ liệu database quá hạn {time_str} cho {display_name}"
-                    )
-
-                    current_time = datetime.now()
-                    current_date = current_time.strftime("%Y-%m-%d")
-
-                    # Track stale databases
-                    if display_name not in self.first_stale_times:
-                        self.first_stale_times[display_name] = current_time
-
-                    # Lấy thời gian data mới nhất từ dt_latest_time để kiểm tra ngày lễ
-                    latest_data_date = dt_latest_time.strftime("%Y-%m-%d")
-
-                    # Kiểm tra ngày lễ: Chỉ báo khi data mới nhất KHÔNG PHẢI hôm nay
-                    # (tức là chưa có data nào hôm nay, nghi ngờ ngày lễ)
-                    is_data_from_today = latest_data_date == current_date
-
-                    # Đếm số database có data KHÔNG PHẢI hôm nay
-                    stale_count = sum(
-                        1
-                        for name in self.first_stale_times.keys()
-                        if name
-                        in self.first_stale_times  # Chỉ đếm những item đang stale
-                    )
-
-                    total_dbs = len(self.first_stale_times)
-
-                    # Chỉ báo ngày lễ khi:
-                    # 1. Data mới nhất KHÔNG phải hôm nay (chưa có data mới hôm nay)
-                    # 2. Nhiều database cùng tình trạng (>= 50%)
-                    is_suspected_holiday = (not is_data_from_today) and (
-                        stale_count >= max(2, int(total_dbs * 0.5))
-                    )
-
-                    # Kiểm tra alert frequency
-                    last_alert = self.last_alert_times.get(display_name)
-
-                    should_send_alert = False
-                    if last_alert is None:
-                        # Gửi alert ngay lần đầu tiên khi quá hạn
-                        should_send_alert = True
+                # ===== EARLY CHECK: Low-activity symbol - chỉ log, không gửi alert =====
+                if display_name in self.low_activity_symbols:
+                    if is_fresh:
+                        self.logger_db.info(
+                            f"[LOW-ACTIVITY] {display_name} có data mới nhưng vẫn được đánh dấu low-activity, không gửi alert"
+                        )
                     else:
-                        time_since_last_alert = (
-                            current_time - last_alert
-                        ).total_seconds()
-                        if time_since_last_alert >= alert_frequency:
-                            should_send_alert = True
+                        self.logger_db.debug(
+                            f"[LOW-ACTIVITY] {display_name} không có data mới, skip alert"
+                        )
+                    await asyncio.sleep(check_frequency)
+                    continue
 
-                    if should_send_alert:
-                        if is_suspected_holiday:
-                            context_message = (
-                                f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_dbs} database đang thiếu data). "
-                                f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
-                            )
-                            alert_level = "warning"
-                        else:
-                            context_message = "Dữ liệu database quá hạn"
-                            alert_level = "warning"
+                # ===== CASE 1: Data FRESH - Reset tất cả tracking =====
+                if is_fresh:
+                    if display_name in self.max_stale_exceeded:
+                        self.logger_db.info(
+                            f"{display_name} có data mới, reset max_stale_exceeded tracking"
+                        )
+                        del self.max_stale_exceeded[display_name]
 
-                        # Build source_info với database connection details
+                    if display_name in self.last_alert_times:
+                        del self.last_alert_times[display_name]
+
+                    if display_name in self.first_stale_times:
+                        del self.first_stale_times[display_name]
+
+                    if display_name in self.consecutive_stale_days:
+                        self.logger_db.info(
+                            f"{display_name} có data mới, reset consecutive_stale_days"
+                        )
+                        del self.consecutive_stale_days[display_name]
+
+                    self.logger_db.info(
+                        f"Kiểm tra database {display_name} - Có dữ liệu mới"
+                    )
+                    await asyncio.sleep(check_frequency)
+                    continue
+
+                # ===== CASE 2: Data STALE - Xử lý phức tạp =====
+                time_str = DataValidator.format_time_overdue(
+                    overdue_seconds, allow_delay
+                )
+
+                if display_name not in self.first_stale_times:
+                    self.first_stale_times[display_name] = current_time
+
+                latest_data_date = dt_latest_time.strftime("%Y-%m-%d")
+                is_data_from_today = latest_data_date == current_date
+
+                total_stale_seconds = overdue_seconds + allow_delay
+                exceeds_max_stale = (
+                    max_stale_seconds is not None
+                    and total_stale_seconds > max_stale_seconds
+                )
+
+                # ===== CASE 2A: Vượt max_stale_seconds =====
+                if exceeds_max_stale:
+                    if display_name not in self.max_stale_exceeded:
+                        self.max_stale_exceeded[display_name] = current_time
+
+                        hours = int(total_stale_seconds // 3600)
+                        minutes = int((total_stale_seconds % 3600) // 60)
+                        seconds = int(total_stale_seconds % 60)
+
+                        max_hours = int(max_stale_seconds // 3600)
+                        max_minutes = int((max_stale_seconds % 3600) // 60)
+                        max_seconds = int(max_stale_seconds % 60)
+
+                        self.logger_db.warning(
+                            f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
+                            f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
+                            f"Gửi alert cuối cùng, sau đó chỉ log."
+                        )
+
+                        status_message = f"Data quá cũ (vượt {max_hours} giờ {max_minutes} phút {max_seconds} giây), không có data mới, dừng gửi thông báo"
+
                         db_cfg = db_config.get("database", {})
                         source_info = {"type": "DATABASE"}
-
                         if "type" in db_cfg:
-                            source_info["database_type"] = db_cfg[
-                                "type"
-                            ]  # mongodb hoặc postgresql
-
+                            source_info["database_type"] = db_cfg["type"]
                         if "database" in db_cfg:
                             source_info["database"] = db_cfg["database"]
-
                         if "collection_name" in db_cfg:
                             source_info["collection"] = db_cfg["collection_name"]
                         elif "table_name" in db_cfg:
@@ -316,27 +315,128 @@ class CheckDatabase:
                             allow_delay=allow_delay,
                             check_frequency=check_frequency,
                             alert_frequency=alert_frequency,
-                            alert_level=alert_level,
-                            error_message=context_message,
+                            alert_level="warning",
+                            error_message="Không có dữ liệu mới",
                             source_info=source_info,
+                            status_message=status_message,
                         )
                         self.last_alert_times[display_name] = current_time
+                    else:
                         self.logger_db.info(
-                            f"Đã gửi alert cho {display_name}. Alert tiếp theo sau {alert_frequency}s"
+                            f"[SILENT MODE] {display_name} vẫn không có data, chỉ log (không gửi alert)"
                         )
-                else:
-                    # Reset tracking
-                    if display_name in self.last_alert_times:
-                        self.logger_db.info(
-                            f"Data của {display_name} đã có dữ liệu mới, reset tracking và sẵn sàng gửi alert nếu lỗi lại"
-                        )
-                        del self.last_alert_times[display_name]
-                    if display_name in self.first_stale_times:
-                        del self.first_stale_times[display_name]
 
-                    self.logger_db.info(
-                        f"Kiểm tra database {display_name} - Có dữ liệu mới"
+                    # Track consecutive stale days
+                    last_check = self.consecutive_stale_days.get(display_name)
+                    if last_check is None:
+                        self.consecutive_stale_days[display_name] = (current_date, 1)
+                    else:
+                        last_date, count = last_check
+                        if last_date != current_date:
+                            new_count = count + 1
+                            self.consecutive_stale_days[display_name] = (
+                                current_date,
+                                new_count,
+                            )
+
+                            if new_count >= 2:
+                                self.low_activity_symbols.add(display_name)
+                                self.logger_db.warning(
+                                    f"[LOW-ACTIVITY DETECTED] {display_name} đã {new_count} ngày liên tiếp không có data. "
+                                    f"Đánh dấu là giao dịch thấp, dừng gửi alert vĩnh viễn."
+                                )
+
+                # ===== CASE 2B: Chưa vượt max_stale - Alert bình thường =====
+                else:
+                    stale_count = len(self.first_stale_times)
+                    total_dbs = max(stale_count, 1)
+
+                    is_suspected_holiday = (not is_data_from_today) and (
+                        stale_count >= max(2, int(total_dbs * 0.5))
                     )
+
+                    self.logger_db.warning(
+                        f"CẢNH BÁO: Dữ liệu database quá hạn {time_str} cho {display_name}"
+                        f"{' (Nghi ngờ ngày lễ)' if is_suspected_holiday else ''}"
+                    )
+
+                    last_alert = self.last_alert_times.get(display_name)
+                    should_send_alert = False
+
+                    if last_alert is None:
+                        should_send_alert = True
+                    else:
+                        time_since_last_alert = (
+                            current_time - last_alert
+                        ).total_seconds()
+                        if time_since_last_alert >= alert_frequency:
+                            should_send_alert = True
+
+                    if should_send_alert:
+                        if is_suspected_holiday:
+                            if self.last_holiday_alert_date != current_date:
+                                context_message = (
+                                    f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_dbs} database đang thiếu data). "
+                                    f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
+                                )
+
+                                db_cfg = db_config.get("database", {})
+                                source_info = {"type": "DATABASE"}
+                                if "type" in db_cfg:
+                                    source_info["database_type"] = db_cfg["type"]
+                                if "database" in db_cfg:
+                                    source_info["database"] = db_cfg["database"]
+                                if "collection_name" in db_cfg:
+                                    source_info["collection"] = db_cfg[
+                                        "collection_name"
+                                    ]
+                                elif "table_name" in db_cfg:
+                                    source_info["table"] = db_cfg["table_name"]
+
+                                self.platform_util.send_alert(
+                                    api_name=db_name,
+                                    symbol=symbol,
+                                    overdue_seconds=overdue_seconds,
+                                    allow_delay=allow_delay,
+                                    check_frequency=check_frequency,
+                                    alert_frequency=alert_frequency,
+                                    alert_level="warning",
+                                    error_message=context_message,
+                                    source_info=source_info,
+                                )
+                                self.last_alert_times[display_name] = current_time
+                                self.last_holiday_alert_date = current_date
+                                self.logger_db.info(
+                                    f"Đã gửi alert ngày lễ cho {display_name}"
+                                )
+                            else:
+                                self.logger_db.info(
+                                    f"Đã gửi alert ngày lễ hôm nay, skip để tránh spam"
+                                )
+                        else:
+                            db_cfg = db_config.get("database", {})
+                            source_info = {"type": "DATABASE"}
+                            if "type" in db_cfg:
+                                source_info["database_type"] = db_cfg["type"]
+                            if "database" in db_cfg:
+                                source_info["database"] = db_cfg["database"]
+                            if "collection_name" in db_cfg:
+                                source_info["collection"] = db_cfg["collection_name"]
+                            elif "table_name" in db_cfg:
+                                source_info["table"] = db_cfg["table_name"]
+
+                            self.platform_util.send_alert(
+                                api_name=db_name,
+                                symbol=symbol,
+                                overdue_seconds=overdue_seconds,
+                                allow_delay=allow_delay,
+                                check_frequency=check_frequency,
+                                alert_frequency=alert_frequency,
+                                alert_level="warning",
+                                error_message="Không có dữ liệu mới",
+                                source_info=source_info,
+                            )
+                            self.last_alert_times[display_name] = current_time
 
                 # Sleep
                 await asyncio.sleep(check_frequency)

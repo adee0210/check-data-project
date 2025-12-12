@@ -94,7 +94,7 @@
             "allow_delay": 1800,
             "check_frequency": 300,
             "alert_frequency": 60,
-            "max_stale_seconds": 604800
+            "max_stale_seconds": 1800
         },
         "schedule": {
             "valid_days": [
@@ -144,12 +144,6 @@
         }
     },
     "ssi": {
-        "api": {
-            "enable": false,
-            "url": null,
-            "record_pointer": 0,
-            "column_to_check": "datetime"
-        },
         "database": {
             "enable": true,
             "type": "mongodb",
@@ -186,12 +180,6 @@
         }
     },
     "vps": {
-        "api": {
-            "enable": false,
-            "url": null,
-            "record_pointer": 0,
-            "column_to_check": "datetime"
-        },
         "database": {
             "enable": true,
             "type": "mongodb",
@@ -325,7 +313,7 @@
         },
         "check": {
             "timezone_offset": 7,
-            "allow_delay": 120,
+            "allow_delay": 180,
             "check_frequency": 10,
             "alert_frequency": 60,
             "max_stale_seconds": 604800

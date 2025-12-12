@@ -138,6 +138,7 @@ class PlatformManager:
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
+        status_message: Optional[str] = None,
     ) -> Dict[str, bool]:
         """
         Gửi alert đến TẤT CẢ primary platforms
@@ -160,6 +161,7 @@ class PlatformManager:
                 "table": "..." (nếu PostgreSQL),
                 "file_path": "..." (nếu DISK)
             }
+            status_message: Optional thông báo trạng thái đặc biệt (vd: "Data quá cũ, dừng kiểm tra")
 
         Returns:
             Dict {platform_name: success_status}
@@ -190,6 +192,7 @@ class PlatformManager:
                     error_message,
                     error_type,
                     source_info,
+                    status_message,
                 )
                 results[platform_name] = success
 

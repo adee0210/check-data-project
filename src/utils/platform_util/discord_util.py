@@ -48,6 +48,7 @@ class DiscordNotifier(BasePlatformNotifier):
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
+        status_message: Optional[str] = None,
     ) -> bool:
         """
         Gửi alert đến Discord qua webhook
@@ -76,6 +77,7 @@ class DiscordNotifier(BasePlatformNotifier):
             error_message,
             error_type,
             source_info,
+            status_message,
         )
 
         # Format Discord embed
@@ -131,6 +133,10 @@ class DiscordNotifier(BasePlatformNotifier):
                 f"**Thời gian gửi message tiếp theo (nếu còn lỗi):** {data['next_time']}",
             ]
         )
+
+        # Thêm status_message nếu có (hiển thị rõ ràng)
+        if data.get("status_message"):
+            description_parts.append(f"\n**⚠️ Trạng thái:** {data['status_message']}")
 
         description = "\n".join(description_parts)
 
