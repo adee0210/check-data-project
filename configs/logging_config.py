@@ -35,7 +35,7 @@ class LoggerConfig:
 
         file_handler = RotatingFileHandler(
             filename=base_path,
-            maxBytes=10 * 1024 * 1024,  # 10MB
+            maxBytes=5 * 1024 * 1024,  # 10MB
             backupCount=4,  # Tổng 5 file: 1 chính + 4 backup
             encoding="utf-8",
         )
