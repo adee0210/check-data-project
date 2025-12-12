@@ -1,211 +1,126 @@
-# HỆ THỐNG GIÁM SÁT DỮ LIỆU
+# Check Data Project — Hệ thống giám sát dữ liệu
 
-## 📋 MỤC LỤC
-
-1. [Tổng Quan](#1-tổng-quan)
-2. [Cài Đặt](#2-cài-đặt)
-3. [Cấu Hình](#3-cấu-hình)
-4. [Chạy Hệ Thống](#4-chạy-hệ-thống)
-5. [Kiến Trúc](#5-kiến-trúc)
-6. [Mở Rộng](#6-mở-rộng)
-7. [Troubleshooting](#7-troubleshooting)
+Phiên bản rút gọn: mô tả nhanh, cách cài và vận hành cơ bản.
 
 ---
 
-## 1. TỔNG QUAN
+## Mục lục
 
-Hệ thống giám sát tự động kiểm tra tính cập nhật (freshness) của dữ liệu từ 3 nguồn:
-
-### 🌐 API Endpoints
-Kiểm tra HTTP API responses, parse JSON và so sánh timestamp
-
-### 🗄️ Database
-Hỗ trợ MongoDB và PostgreSQL, tối ưu queries với MAX/MIN và projection
-
-### 📁 Disk Files
-Đọc nội dung file (JSON, CSV, TXT) hoặc kiểm tra file modification time
-
-### ✨ Tính Năng Chính
-
-- ⚡ **Async Architecture**: Chạy song song nhiều tasks, không block
-- 🔄 **Dynamic Reload**: Tự động reload config mỗi 10s
-- 💾 **Smart Caching**: Cache symbols 24h, connections pooling
-- 🎯 **Optimized Queries**: PostgreSQL dùng MAX/MIN, MongoDB dùng projection
-- 🏖️ **Holiday Detection**: Phát hiện ngày lễ thông minh
-- 📢 **Multi-Platform Alerts**: Discord, Telegram (dễ thêm Slack, Email...)
-- 🛑 **Auto Shutdown**: Dừng task khi data cũ quá ngưỡng
-- 📂 **File Content Reading**: Hỗ trợ đọc JSON, CSV, TXT để lấy datetime
-- ⏰ **Flexible Scheduling**: Schedule riêng cho từng data source
+- Tổng quan
+- Yêu cầu & Cài đặt
+- Cấu hình nhanh
+- Chạy hệ thống
+- Lưu ý vận hành
+- Liên hệ
 
 ---
 
-## 2. CÀI ĐẶT
+## 1. Tổng quan
 
-### Yêu Cầu
+`check-data-project` giám sát tính cập nhật của dữ liệu từ:
+- API (JSON)
+- Database (MongoDB, PostgreSQL)
+- Disk files (JSON/CSV/TXT/mtime)
 
-- Python 3.7+
-- MongoDB hoặc PostgreSQL (optional, nếu dùng Database monitoring)
+Hệ thống gửi alert qua Discord/Telegram, hỗ trợ reload config động, có cơ chế giảm spam alert và phát hiện ngày nghỉ/low-activity.
 
-### Cài Đặt Dependencies
+---
 
-#### Linux/Mac
-```bash
-# Clone repository
-git clone https://github.com/adee0210/check-data-project
-cd check_data_project
+## 2. Yêu cầu & Cài đặt
 
-# Tạo virtual environment
-python -m venv .venv
+- Python 3.8+
+- Sao chép repo và cài dependencies:
 
-# Kích hoạt
-source .venv/bin/activate
+Windows PowerShell:
 
-# Cài packages
-pip install -r requirements.txt
-```
-
-#### Windows
 ```powershell
-# Clone repository
 git clone https://github.com/adee0210/check-data-project
 cd check_data_project
-
-# Tạo virtual environment
 python -m venv .venv
-
-# Kích hoạt
-.venv\Scripts\Activate.ps1
-
-# Cài packages
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### Cấu Trúc Thư Mục
+Linux / macOS:
 
-```
-check_data_project/
-├── configs/                            # Cấu hình
-│   ├── common_config.json              # Platform + DB credentials
-│   ├── data_sources_config.json        # Data sources (API, DB, Disk)
-│   ├── database_config/                # Database connectors
-│   │   ├── base_db.py                  # Abstract base class
-│   │   ├── mongo_config.py             # MongoDB connector
-│   │   ├── postgres_config.py          # PostgreSQL connector
-│   │   └── database_manager.py         # Factory manager
-│   └── logging_config.py               # Logging config (10MB/file, 5 files)
-│
-├── src/
-│   ├── main.py                         # Entry point
-│   ├── check/                          # Monitors
-│   │   ├── check_api.py                # API monitor
-│   │   ├── check_database.py           # Database monitor
-│   │   └── check_disk.py               # Disk/File monitor
-│   ├── logic_check/                    # Business logic
-│   │   ├── data_validator.py           # Data freshness validation
-│   │   └── time_validator.py           # Schedule validation
-│   └── utils/                          # Utilities
-│       ├── platform_util/              # Platform notifiers
-│       │   ├── base_platform.py        # Abstract base class
-│       │   ├── discord_util.py         # Discord notifier
-│       │   ├── telegram_util.py        # Telegram notifier
-│       │   └── platform_manager.py     # Factory manager
-│       ├── load_config_util.py         # Config loader with caching
-│       ├── symbol_resolver_util.py     # Symbol resolver
-│       ├── task_manager_util.py        # Task manager
-│       └── convert_datetime_util.py    # Datetime utils
-│
-├── cache/                              # Auto-generated cache
-├── logs/                               # Log files (api.log, database.log, main.log)
-├── run.sh                              # Linux/Mac startup script
-├── run.ps1                             # Windows startup script
-└── requirements.txt
+```bash
+git clone https://github.com/adee0210/check-data-project
+cd check_data_project
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ---
 
-## 3. CẤU HÌNH
+## 3. Cấu hình nhanh
 
-### 3.1. Platform Config (`common_config.json`)
+Cấu hình nằm trong `configs/`. Hai file thường chỉnh:
+- `configs/data_sources_config.json` — cấu hình các nguồn dữ liệu
+- `configs/common_config.json` — platform/webhook và DB credentials
 
-```json
-{
-  "PLATFORM_CONFIG": {
-    "discord": {
-      "webhooks_url": "https://discord.com/api/webhooks/YOUR_WEBHOOK",
-      "is_primary": true
-    },
-    "telegram": {
-      "bot_token": "YOUR_BOT_TOKEN",
-      "chat_id": "YOUR_CHAT_ID",
-      "is_primary": false
-    }
-  },
-  "MONGO_CONFIG": {
-    "host": "localhost",
-    "port": 27017,
-    "username": "admin",
-    "password": "password",
-    "auth_source": "admin"
-  },
-  "POSTGRE_CONFIG": {
-    "host": "localhost",
-    "port": 5432,
-    "database": "your_db",
-    "user": "postgres",
-    "password": "password"
-  }
-}
+Quan trọng:
+- `check.allow_delay` — độ trễ cho phép (giây)
+- `check.check_frequency` — tần suất kiểm tra (giây)
+- `check.alert_frequency` — tần suất gửi alert (giây)
+- `check.max_stale_seconds` — (thay cho max_stale_days) giới hạn stale (giây)
+- `api.nested_list` — nếu API trả `data` là list-nested
+
+Điều chỉnh các giá trị trên sẽ có hiệu lực khi config được reload (hệ thống hỗ trợ reload động).
+
+---
+
+## 4. Chạy hệ thống
+
+Windows PowerShell (script `run.ps1`):
+
+```powershell
+.\run.ps1 start
+.\run.ps1 status
+.\run.ps1 restart
+.\run.ps1 stop
 ```
 
-### 3.2. Data Sources Config (`data_sources_config.json`)
+Chạy trực tiếp (dev):
 
-**Cấu trúc thống nhất cho tất cả data sources:**
-
-```json
-{
-  "source-name": {
-    "api": {
-      "enable": true,
-      "url": "https://api.example.com/data?symbol={symbol}",
-      "record_pointer": "first",
-      "column_to_check": "datetime"
-    },
-    "database": {
-      "enable": true,
-      "type": "mongodb",
-      "database": "db_name",
-      "collection_name": "collection",
-      "record_pointer": "first",
-      "column_to_check": "datetime"
-    },
-    "disk": {
-      "enable": true,
-      "file_type": "json",
-      "file_path": "/path/to/file.json",
-      "record_pointer": "first",
-      "column_to_check": "datetime"
-    },
-    "symbols": {
-      "auto_sync": true,
-      "values": null,
-      "column": "symbol"
-    },
-    "check": {
-      "timezone_offset": 7,
-      "allow_delay": 60,
-      "check_frequency": 10,
-      "alert_frequency": 60,
-      "max_stale_days": 3
-    },
-    "schedule": {
-      "valid_days": [0, 1, 2, 3, 4],
-      "time_ranges": ["09:00-11:30", "13:00-14:30"]
-    }
-  }
-}
+```powershell
+.\.venv\Scripts\Activate.ps1
+python src\main.py
 ```
 
-#### Giải Thích Config
+Xem logs (PowerShell):
+
+```powershell
+Get-Content logs\main.log -Wait -Tail 100
+```
+
+---
+
+## 5. Lưu ý vận hành
+
+- Mức cảnh báo: ERROR (đỏ), WARNING (cam), INFO (xanh lá)
+- Quy tắc API:
+  - `code != 200` hoặc JSON sai cấu trúc → `ERROR`
+  - `code == 200` & `data == []` → `WARNING`
+  - `nested_list: true` để hỗ trợ `data: [[...]]`
+- Khi vượt `max_stale_seconds`: gửi final alert rồi giảm spam (silent mode), task vẫn tiếp tục theo dõi
+- Low-activity detection: nếu symbol nhiều lần stale → tạm ngưng alert cho symbol đó (hiện chưa lưu persistent across restarts)
+
+---
+
+## 6. Muốn tôi làm thêm?
+
+- Thêm ví dụ cấu hình rút gọn
+- Thêm hướng dẫn debug webhook / mock API
+- Thêm README tiếng Anh hoặc badges CI
+
+Hãy cho biết bạn muốn tôi cập nhật thêm nội dung cụ thể nào.
+
+---
+
+Author: `adee0210`
+Repo: https://github.com/adee0210/check-data-project
+
 
 **api section:**
 - `enable`: Bật/tắt kiểm tra API

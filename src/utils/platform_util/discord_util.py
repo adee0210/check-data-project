@@ -136,7 +136,7 @@ class DiscordNotifier(BasePlatformNotifier):
 
         # Thêm status_message nếu có (hiển thị rõ ràng)
         if data.get("status_message"):
-            description_parts.append(f"\n**⚠️ Trạng thái:** {data['status_message']}")
+            description_parts.append(f"\n**Trạng thái:** {data['status_message']}")
 
         description = "\n".join(description_parts)
 

@@ -88,9 +88,7 @@ class CheckAPI:
             uri = api_cfg.get("url")
             record_pointer = api_cfg.get("record_pointer", 0)
             column_to_check = api_cfg.get("column_to_check", "datetime")
-            data_wrapper = api_cfg.get(
-                "data_wrapper", "data"
-            )  # Tên key chứa array data
+            nested_list = api_cfg.get("nested_list", False)  # True nếu API trả [[...]]
 
             timezone_offset = check_cfg.get("timezone_offset", 7)
             allow_delay = check_cfg.get("allow_delay", 60)
@@ -131,28 +129,104 @@ class CheckAPI:
                 r = requests.get(url=uri, timeout=10)
                 r.raise_for_status()
 
-                data = r.json()
+                response = r.json()
 
-                # Kiểm tra cấu trúc dữ liệu - support custom data_wrapper
-                if data_wrapper not in data:
-                    raise KeyError(f"Response không có key '{data_wrapper}'")
+                # Xác định data_array dựa vào nested_list
+                if nested_list:
+                    # Response format: [[{...}, {...}]]
+                    # Hoặc với wrapper: {"code": 200, "data": [[{...}]]}
+                    if isinstance(response, dict):
+                        # Có wrapper (code, message, data)
+                        response_code = response.get("code", 200)
+                        if response_code != 200:
+                            raise ValueError(
+                                f"Response code = {response_code} (không phải 200)"
+                            )
 
-                data_array = data[data_wrapper]
-                if not isinstance(data_array, list) or len(data_array) == 0:
-                    raise IndexError(f"Mảng '{data_wrapper}' rỗng hoặc không phải list")
+                        # Lấy data từ các key phổ biến (ưu tiên 'data' trước)
+                        if "data" in response:
+                            data_array = response["data"]
+                        elif "result" in response:
+                            data_array = response["result"]
+                        else:
+                            raise KeyError("Response không có key 'data' hoặc 'result'")
+                    else:
+                        # Response trực tiếp là array
+                        data_array = response
 
-                # Handle nested array [[...]] - flatten to [...]
-                if isinstance(data_array[0], list):
+                    # Kiểm tra data_array có phải list không
+                    if not isinstance(data_array, list):
+                        raise TypeError(
+                            f"Response không phải list, là {type(data_array).__name__}"
+                        )
+
+                    # Nested list: [[...]] -> [...]
+                    if len(data_array) == 0:
+                        raise ValueError("EMPTY_DATA")
+
+                    if not isinstance(data_array[0], list):
+                        raise TypeError(
+                            f"Nested list expected nhưng phần tử đầu tiên không phải list"
+                        )
+
+                    # Flatten
                     data_array = data_array[0]
-                    if not isinstance(data_array, list) or len(data_array) == 0:
-                        raise IndexError(f"Nested array trong '{data_wrapper}' rỗng")
 
+                    if not isinstance(data_array, list):
+                        raise TypeError(f"Nested array sau flatten không phải list")
+
+                else:
+                    # Response format: [{...}, {...}]
+                    # Hoặc với wrapper: {"code": 200, "data": [{...}]}
+                    if isinstance(response, dict):
+                        # Có wrapper
+                        response_code = response.get("code", 200)
+                        if response_code != 200:
+                            raise ValueError(
+                                f"Response code = {response_code} (không phải 200)"
+                            )
+
+                        # Lấy data từ các key phổ biến (ưu tiên 'data' trước)
+                        if "data" in response:
+                            data_array = response["data"]
+                        elif "result" in response:
+                            data_array = response["result"]
+                        else:
+                            raise KeyError("Response không có key 'data' hoặc 'result'")
+                    else:
+                        # Response trực tiếp là array
+                        data_array = response
+
+                    # Kiểm tra data_array có phải list không
+                    if not isinstance(data_array, list):
+                        raise TypeError(
+                            f"Response không phải list, là {type(data_array).__name__}"
+                        )
+
+                # Kiểm tra mảng rỗng + code=200 → WARNING (chưa có data vào thời điểm này)
+                if len(data_array) == 0:
+                    raise ValueError("EMPTY_DATA")
+
+                # Kiểm tra record_pointer hợp lệ
                 if record_pointer >= len(data_array):
                     raise IndexError(
                         f"record_pointer {record_pointer} vượt quá độ dài mảng {len(data_array)}"
                     )
 
-                record_pointer_data_with_column_to_check = data_array[record_pointer][
+                # Lấy record theo pointer
+                target_record = data_array[record_pointer]
+
+                # Kiểm tra target_record có phải dict không
+                if not isinstance(target_record, dict):
+                    raise TypeError(
+                        f"Record tại pointer {record_pointer} không phải dict, là {type(target_record).__name__}"
+                    )
+
+                # Lấy giá trị column_to_check
+                if column_to_check not in target_record:
+                    raise KeyError(f"Record không có column '{column_to_check}'")
+
+                record_pointer_data_with_column_to_check = target_record[
                     column_to_check
                 ]
 
@@ -174,7 +248,33 @@ class CheckAPI:
                 error_type = "API"
                 api_error = True
                 self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
-            except (KeyError, IndexError) as e:
+            except ValueError as e:
+                error_str = str(e)
+                # Code != 200 hoặc lỗi giá trị khác → ERROR
+                if "Response code" in error_str:
+                    error_message = error_str
+                    error_type = "API"
+                    api_error = True
+                    self.logger_api.error(
+                        f"Lỗi API: {error_message} cho {display_name}"
+                    )
+                # Mảng rỗng + code=200 → WARNING (chưa có data vào thời điểm này)
+                elif "EMPTY_DATA" in error_str:
+                    error_message = "Chưa có dữ liệu vào thời điểm này"
+                    error_type = "API_WARNING"
+                    api_error = True
+                    self.logger_api.warning(
+                        f"Cảnh báo API: {error_message} cho {display_name}"
+                    )
+                else:
+                    error_message = f"Lỗi giá trị - {error_str}"
+                    error_type = "API"
+                    api_error = True
+                    self.logger_api.error(
+                        f"Lỗi API: {error_message} cho {display_name}"
+                    )
+            except (KeyError, IndexError, TypeError) as e:
+                # Format sai - đây mới là ERROR thật sự
                 error_message = f"Dữ liệu không đúng format - {str(e)}"
                 error_type = "API"
                 api_error = True
@@ -202,6 +302,12 @@ class CheckAPI:
                     # Build source_info với API URL
                     source_info = {"type": "API", "url": uri}
 
+                    # Xác định alert_level dựa vào error_type
+                    if error_type == "API_WARNING":
+                        alert_level = "warning"
+                    else:
+                        alert_level = "error"
+
                     self.platform_util.send_alert(
                         api_name=api_name,
                         symbol=symbol,
@@ -209,7 +315,7 @@ class CheckAPI:
                         allow_delay=allow_delay,
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
-                        alert_level="error",
+                        alert_level=alert_level,
                         error_message=error_message,
                         error_type=error_type,
                         source_info=source_info,

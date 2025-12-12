@@ -92,9 +92,9 @@
         "check": {
             "timezone_offset": 0,
             "allow_delay": 1800,
-            "check_frequency": 300,
+            "check_frequency": 60,
             "alert_frequency": 60,
-            "max_stale_seconds": 1800
+            "max_stale_seconds": 3600
         },
         "schedule": {
             "valid_days": [
@@ -304,7 +304,7 @@
             "url": "http://192.168.110.31/ckvn/vn100?days=0",
             "record_pointer": -1,
             "column_to_check": "Date",
-            "data_wrapper": "data"
+            "nested_list": true
         },
         "symbols": {
             "auto_sync": null,
