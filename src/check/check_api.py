@@ -33,7 +33,7 @@ class CheckAPI:
         # Format: {api_name: symbols_list}
         self.symbols_cache = {}
 
-        # Track items vượt quá max_stale_days
+        # Track items vượt quá max_stale_seconds
         self.max_stale_exceeded = {}
 
     def _load_config(self):
@@ -87,7 +87,7 @@ class CheckAPI:
             allow_delay = check_cfg.get("allow_delay", 60)
             alert_frequency = check_cfg.get("alert_frequency", 60)
             check_frequency = check_cfg.get("check_frequency", 10)
-            max_stale_days = check_cfg.get("max_stale_days", None)
+            max_stale_seconds = check_cfg.get("max_stale_seconds", None)
 
             valid_schedule = schedule_cfg
             holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
@@ -230,18 +230,20 @@ class CheckAPI:
                 dt_record_pointer_data_with_column_to_check, allow_delay
             )
 
-            # EARLY CHECK: Nếu data đã vượt quá max_stale_days, dừng hẳn
-            if not is_fresh and max_stale_days is not None:
+            # EARLY CHECK: Nếu data đã vượt quá max_stale_seconds, dừng hẳn
+            if not is_fresh and max_stale_seconds is not None:
                 total_stale_seconds = overdue_seconds + allow_delay
-                stale_days = total_stale_seconds / 86400
 
-                if stale_days > max_stale_days:
+                if total_stale_seconds > max_stale_seconds:
                     # Chỉ log warning 1 lần rồi dừng hẳn
                     if display_name not in self.max_stale_exceeded:
                         self.max_stale_exceeded[display_name] = datetime.now()
+                        # Chuyển đổi giây sang định dạng dễ đọc
+                        stale_hours = total_stale_seconds / 3600
+                        max_hours = max_stale_seconds / 3600
                         self.logger_api.warning(
-                            f"Data của {display_name} đã cũ {stale_days:.1f} ngày (vượt ngưỡng {max_stale_days} ngày). "
-                            f"Dừng check và alert cho item này VĨNH VIỄN."
+                            f"Data của {display_name} đã cũ {stale_hours:.1f} giờ (vượt ngưỡng {max_hours:.1f} giờ). "
+                            f"Dừng check và alert cho item này VỈNH VIỄN."
                         )
 
                     # Dừng hẳn task này
@@ -332,7 +334,7 @@ class CheckAPI:
                         allow_delay=allow_delay,
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
-                        alert_level="warning" if not is_suspected_holiday else "info",
+                        alert_level="warning",
                         error_message=context_message,
                         source_info=source_info,
                     )
