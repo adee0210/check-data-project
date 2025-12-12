@@ -13,6 +13,20 @@ if (-not (Test-Path $LOG_DIR)) {
 }
 
 function Start-Monitoring {
+    # Kiểm tra và tạo virtual environment nếu chưa có
+    $VenvDir = Join-Path $SCRIPT_DIR ".venv"
+    if (-not (Test-Path $VenvDir)) {
+        Write-Host "Tạo virtual environment..." -ForegroundColor Cyan
+        & python -m venv $VenvDir
+        Write-Host "Kích hoạt virtual environment và cài đặt packages..." -ForegroundColor Cyan
+        & (Join-Path $VenvDir "Scripts\activate.ps1")
+        & pip install -r (Join-Path $SCRIPT_DIR "requirements.txt")
+        Write-Host "Virtual environment đã được tạo và cài đặt xong." -ForegroundColor Green
+    }
+    else {
+        Write-Host "Virtual environment đã tồn tại, bỏ qua." -ForegroundColor Gray
+    }
+
     # Kiểm tra xem đã chạy chưa
     if (Test-Path $PID_FILE) {
         $ProcessId = Get-Content $PID_FILE

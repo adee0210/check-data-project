@@ -38,24 +38,20 @@ Hệ thống gửi alert qua **Discord/Telegram** (cấu hình trong `configs/co
 ## Yêu cầu & Cài đặt
 
 - **Python**: 3.8+
-- **Cài packages**:
+- **Cài đặt tự động**: Script `run.ps1` (Windows) hoặc `run.sh` (Linux/macOS) sẽ tự động tạo virtual environment và cài đặt packages khi chạy lần đầu.
 
 ### Windows PowerShell
 ```powershell
 git clone https://github.com/adee0210/check-data-project
 cd check_data_project
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+.\run.ps1 start  # Tự động tạo .venv và cài đặt packages
 ```
 
 ### Linux / macOS
 ```bash
 git clone https://github.com/adee0210/check-data-project
 cd check_data_project
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+./run.sh start  # Tự động tạo .venv và cài đặt packages
 ```
 
 ---
@@ -85,15 +81,27 @@ Cấu hình nằm trong `configs/data_sources_config.json`.
 .\run.ps1 stop
 ```
 
+### Linux / macOS
+```bash
+./run.sh start
+./run.sh status
+./run.sh restart
+./run.sh stop
+./run.sh logs    # Xem log
+./run.sh health  # Kiểm tra tình trạng hệ thống
+```
+
 ### Chạy trực tiếp (Development)
-```powershell
-.\.venv\Scripts\Activate.ps1
-python src\main.py
+```bash
+source .venv/bin/activate
+python src/main.py
 ```
 
 ### Xem logs
-```powershell
-Get-Content logs\main.log -Wait -Tail 100
+```bash
+tail -f logs/main.log
+tail -f logs/api.log
+tail -f logs/database.log
 ```
 
 ---

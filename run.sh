@@ -10,6 +10,18 @@ mkdir -p "$LOG_DIR"
 PYTHON_CMD="$SCRIPT_DIR/.venv/bin/python $SCRIPT_DIR/src/main.py"
 
 start() {
+    # Kiểm tra và tạo virtual environment nếu chưa có
+    if [ ! -d "$SCRIPT_DIR/.venv" ]; then
+        echo "Tạo virtual environment..."
+        python3 -m venv "$SCRIPT_DIR/.venv"
+        echo "Kích hoạt virtual environment và cài đặt packages..."
+        source "$SCRIPT_DIR/.venv/bin/activate"
+        pip install -r "$SCRIPT_DIR/requirements.txt"
+        echo "Virtual environment đã được tạo và cài đặt xong."
+    else
+        echo "Virtual environment đã tồn tại, bỏ qua."
+    fi
+
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         if ps -p "$PID" > /dev/null 2>&1; then
@@ -24,7 +36,7 @@ start() {
     echo "Đang khởi động hệ thống giám sát dữ liệu..."
     echo "File log: $LOG_DIR/"
     cd "$SCRIPT_DIR"
-    nohup $PYTHON_CMD &
+    nohup bash -c "source $SCRIPT_DIR/.venv/bin/activate && $SCRIPT_DIR/.venv/bin/python $SCRIPT_DIR/src/main.py" &
     echo $! > "$PID_FILE"
     echo "Hệ thống đã khởi động thành công (PID: $(cat "$PID_FILE"))"
     echo "Sử dụng lệnh 'tail -f $LOG_DIR/api.log' để xem log API"
@@ -134,71 +146,71 @@ health() {
     
     # Kiểm tra file main.py
     if [ -f "$SCRIPT_DIR/src/main.py" ]; then
-        echo "✓ Tìm thấy main script"
+        echo "Tim thay main script"
     else
-        echo "✗ Không tìm thấy main script tại $SCRIPT_DIR/src/main.py"
+        echo "Khong tim thay main script tai $SCRIPT_DIR/src/main.py"
     fi
     
     # Kiểm tra config files
     if [ -f "$SCRIPT_DIR/configs/common_config.json" ]; then
-        echo "✓ Tìm thấy file config chung"
+        echo "Tim thay file config chung"
     else
-        echo "✗ Không tìm thấy common_config.json"
+        echo "Khong tim thay common_config.json"
     fi
     
     if [ -f "$SCRIPT_DIR/configs/check_api_config.json" ]; then
-        echo "✓ Tìm thấy config API"
+        echo "Tim thay config API"
     else
-        echo "✗ Không tìm thấy check_api_config.json"
+        echo "Khong tim thay check_api_config.json"
     fi
     
     if [ -f "$SCRIPT_DIR/configs/check_database_config.json" ]; then
-        echo "✓ Tìm thấy config Database"
+        echo "Tim thay config Database"
     else
-        echo "✗ Không tìm thấy check_database_config.json"
+        echo "Khong tim thay check_database_config.json"
     fi
     
     if [ -f "$SCRIPT_DIR/configs/check_disk_config.json" ]; then
-        echo "✓ Tìm thấy config Disk"
+        echo "Tim thay config Disk"
     else
-        echo "✗ Không tìm thấy check_disk_config.json"
+        echo "Khong tim thay check_disk_config.json"
     fi
     
     # Kiểm tra Python virtual environment
     if [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then
-        echo "✓ Tìm thấy Python virtual environment"
+        echo "Tim thay Python virtual environment"
         PYTHON_VERSION=$("$SCRIPT_DIR/.venv/bin/python" --version 2>&1)
-        echo "  Phiên bản: $PYTHON_VERSION"
+        echo "  Phien ban: $PYTHON_VERSION"
     else
-        echo "✗ Không tìm thấy Python virtual environment tại $SCRIPT_DIR/.venv"
+        echo "Khong tim thay Python virtual environment tai $SCRIPT_DIR/.venv"
     fi
     
     # Kiểm tra các package Python cần thiết
     if [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then
         echo ""
-        echo "Kiểm tra các package cần thiết..."
-        "$SCRIPT_DIR/.venv/bin/python" -c "import aiohttp; print('✓ aiohttp đã cài đặt')" 2>/dev/null || echo "✗ aiohttp chưa cài đặt"
-        "$SCRIPT_DIR/.venv/bin/python" -c "import pymongo; print('✓ pymongo đã cài đặt')" 2>/dev/null || echo "✗ pymongo chưa cài đặt"
-        "$SCRIPT_DIR/.venv/bin/python" -c "import psycopg2; print('✓ psycopg2 đã cài đặt')" 2>/dev/null || echo "✗ psycopg2 chưa cài đặt"
-        "$SCRIPT_DIR/.venv/bin/python" -c "import pytz; print('✓ pytz đã cài đặt')" 2>/dev/null || echo "✗ pytz chưa cài đặt"
-        "$SCRIPT_DIR/.venv/bin/python" -c "import requests; print('✓ requests đã cài đặt')" 2>/dev/null || echo "✗ requests chưa cài đặt"
+        echo "Kiem tra cac package can thiet..."
+        "$SCRIPT_DIR/.venv/bin/python" -c "import aiohttp; print('aiohttp da cai dat')" 2>/dev/null || echo "aiohttp chua cai dat"
+        "$SCRIPT_DIR/.venv/bin/python" -c "import pymongo; print('pymongo da cai dat')" 2>/dev/null || echo "pymongo chua cai dat"
+        "$SCRIPT_DIR/.venv/bin/python" -c "import psycopg2; print('psycopg2 da cai dat')" 2>/dev/null || echo "psycopg2 chua cai dat"
+        "$SCRIPT_DIR/.venv/bin/python" -c "import pytz; print('pytz da cai dat')" 2>/dev/null || echo "pytz da cai dat"
+        "$SCRIPT_DIR/.venv/bin/python" -c "import requests; print('requests da cai dat')" 2>/dev/null || echo "requests chua cai dat"
     fi
     
     # Kiểm tra thư mục logs
     echo ""
     if [ -d "$LOG_DIR" ]; then
-        echo "✓ Thư mục logs tồn tại"
+        echo "Thu muc logs ton tai"
         LOG_SIZE=$(du -sh "$LOG_DIR" 2>/dev/null | cut -f1)
-        echo "  Dung lượng logs: $LOG_SIZE"
+        echo "  Dung luong logs: $LOG_SIZE"
     else
-        echo "✗ Thư mục logs không tồn tại"
+        echo "Thu muc logs khong ton tai"
     fi
     
     # Kiểm tra quyền thực thi
     if [ -x "$SCRIPT_DIR/.venv/bin/python" ]; then
-        echo "✓ Python có quyền thực thi"
+        echo "Python co quyen thuc thi"
     else
-        echo "⚠ Python có thể không có quyền thực thi"
+        echo "Python co the khong co quyen thuc thi"
     fi
 }
 
