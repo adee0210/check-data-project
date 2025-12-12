@@ -5,6 +5,7 @@ import requests
 from utils.convert_datetime_util import ConvertDatetimeUtil
 from logic_check.time_validator import TimeValidator
 from logic_check.data_validator import DataValidator
+from utils.alert_tracker_util import AlertTracker
 
 from configs.logging_config import LoggerConfig
 from utils.task_manager_util import TaskManager
@@ -21,29 +22,12 @@ class CheckAPI:
         self.task_manager_api = TaskManager()
         self.platform_util = PlatformManager()
 
-        self.last_alert_times = {}
-
-        self.first_stale_times = {}
-        self.suspected_holidays = {}
-
-        # Để chỉ log 1 lần khi vào/ra khỏi schedule
-        self.outside_schedule_logged = {}
-
         # Symbols cache ở class level để persist qua các reload
         # Format: {api_name: symbols_list}
         self.symbols_cache = {}
 
-        # Track items vượt quá max_stale_seconds (đã gửi alert "dừng gửi thông báo")
-        self.max_stale_exceeded = {}  # {display_name: datetime}
-
-        # Track low-activity symbols (đã xác nhận giao dịch thấp - không gửi alert nữa)
-        self.low_activity_symbols = set()  # {display_name, ...}
-
-        # Track consecutive days without data (để phát hiện low-activity)
-        self.consecutive_stale_days = {}  # {display_name: (last_check_date, count)}
-
-        # Track last holiday alert date
-        self.last_holiday_alert_date = None  # Last date khi gửi alert "ngày lễ"
+        # Sử dụng AlertTracker để quản lý tất cả tracking
+        self.tracker = AlertTracker()
 
     def _load_config(self):
         """
@@ -109,21 +93,21 @@ class CheckAPI:
 
             if not is_within_schedule:
                 # Chỉ log 1 lần khi vào trạng thái ngoài giờ
-                if not self.outside_schedule_logged.get(display_name, False):
+                if not self.tracker.outside_schedule_logged.get(display_name, False):
                     self.logger_api.info(
                         f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
                     )
-                    self.outside_schedule_logged[display_name] = True
+                    self.tracker.outside_schedule_logged[display_name] = True
 
                 await asyncio.sleep(60)
                 continue
             else:
                 # Reset flag khi vào lại trong giờ
-                if self.outside_schedule_logged.get(display_name, False):
+                if self.tracker.outside_schedule_logged.get(display_name, False):
                     self.logger_api.info(
                         f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
                     )
-                    self.outside_schedule_logged[display_name] = False
+                    self.tracker.outside_schedule_logged[display_name] = False
 
             try:
                 r = requests.get(url=uri, timeout=10)
@@ -263,6 +247,18 @@ class CheckAPI:
                     error_message = "Chưa có dữ liệu vào thời điểm này"
                     error_type = "API_WARNING"
                     api_error = True
+
+                    # Track empty data để phát hiện pattern và chuyển silent mode
+                    is_silent, duration = self.tracker.track_empty_data(
+                        display_name, silent_threshold_seconds=1800
+                    )
+
+                    if is_silent and duration is not None:
+                        self.logger_api.warning(
+                            f"[EMPTY_DATA] {display_name} liên tục empty data trong {int(duration/60)} phút. "
+                            f"Chuyển silent mode - chỉ log, không gửi alert nữa."
+                        )
+
                     self.logger_api.warning(
                         f"Cảnh báo API: {error_message} cho {display_name}"
                     )
@@ -288,15 +284,23 @@ class CheckAPI:
             if api_error:
                 # Xử lý lỗi API - gửi cảnh báo
                 current_time = datetime.now()
-                last_alert = self.last_alert_times.get(display_name)
 
-                should_send_alert = False
-                if last_alert is None:
-                    should_send_alert = True
-                else:
-                    time_since_last_alert = (current_time - last_alert).total_seconds()
-                    if time_since_last_alert >= alert_frequency:
-                        should_send_alert = True
+                # Kiểm tra xem có đang trong silent mode cho EMPTY_DATA không
+                if error_type == "API_WARNING":
+                    is_silent, _ = self.tracker.track_empty_data(
+                        display_name, silent_threshold_seconds=0
+                    )
+                    if is_silent:
+                        # Silent mode - chỉ log, không gửi alert
+                        self.logger_api.debug(
+                            f"[EMPTY_DATA SILENT] {display_name} vẫn empty data, skip alert (silent mode)"
+                        )
+                        await asyncio.sleep(check_frequency)
+                        continue
+
+                should_send_alert = self.tracker.should_send_alert(
+                    display_name, alert_frequency
+                )
 
                 if should_send_alert:
                     # Build source_info với API URL
@@ -320,7 +324,7 @@ class CheckAPI:
                         error_type=error_type,
                         source_info=source_info,
                     )
-                    self.last_alert_times[display_name] = current_time
+                    self.tracker.record_alert_sent(display_name)
 
                 await asyncio.sleep(check_frequency)
                 continue
@@ -348,8 +352,15 @@ class CheckAPI:
             current_time = datetime.now()
             current_date = current_time.strftime("%Y-%m-%d")
 
+            # Reset empty_data_tracking nếu API trả về data thành công
+            duration = self.tracker.reset_empty_data(display_name)
+            if duration is not None:
+                self.logger_api.info(
+                    f"[EMPTY_DATA RESOLVED] {display_name} đã có data sau {int(duration/60)} phút empty. Reset tracking."
+                )
+
             # ===== EARLY CHECK: Low-activity symbol - chỉ log, không gửi alert =====
-            if display_name in self.low_activity_symbols:
+            if self.tracker.is_low_activity(display_name):
                 if is_fresh:
                     # Data mới xuất hiện - log nhưng KHÔNG xóa khỏi low_activity
                     # (vì đã xác định là giao dịch thấp)
@@ -366,23 +377,10 @@ class CheckAPI:
             # ===== CASE 1: Data FRESH - Reset tất cả tracking =====
             if is_fresh:
                 # Reset tracking
-                if display_name in self.max_stale_exceeded:
-                    self.logger_api.info(
-                        f"{display_name} có data mới, reset max_stale_exceeded tracking"
-                    )
-                    del self.max_stale_exceeded[display_name]
+                if self.tracker.is_in_silent_mode(display_name):
+                    self.logger_api.info(f"{display_name} có data mới, reset tracking")
 
-                if display_name in self.last_alert_times:
-                    del self.last_alert_times[display_name]
-
-                if display_name in self.first_stale_times:
-                    del self.first_stale_times[display_name]
-
-                if display_name in self.consecutive_stale_days:
-                    self.logger_api.info(
-                        f"{display_name} có data mới, reset consecutive_stale_days"
-                    )
-                    del self.consecutive_stale_days[display_name]
+                self.tracker.reset_fresh_data(display_name)
 
                 self.logger_api.info(f"Kiểm tra API {display_name} - Có dữ liệu mới")
                 await asyncio.sleep(check_frequency)
@@ -390,10 +388,6 @@ class CheckAPI:
 
             # ===== CASE 2: Data STALE - Xử lý phức tạp =====
             time_str = DataValidator.format_time_overdue(overdue_seconds, allow_delay)
-
-            # Track lần đầu data bị cũ
-            if display_name not in self.first_stale_times:
-                self.first_stale_times[display_name] = current_time
 
             # Lấy ngày của data mới nhất
             latest_data_date = dt_record_pointer_data_with_column_to_check.strftime(
@@ -403,17 +397,14 @@ class CheckAPI:
 
             # Check nếu vượt max_stale_seconds
             total_stale_seconds = overdue_seconds + allow_delay
-            exceeds_max_stale = (
-                max_stale_seconds is not None
-                and total_stale_seconds > max_stale_seconds
+            exceeds_max_stale, is_first_time = self.tracker.track_stale_data(
+                display_name, max_stale_seconds, total_stale_seconds
             )
 
             # ===== CASE 2A: Vượt max_stale_seconds =====
             if exceeds_max_stale:
                 # Gửi alert 1 lần duy nhất
-                if display_name not in self.max_stale_exceeded:
-                    self.max_stale_exceeded[display_name] = current_time
-
+                if is_first_time:
                     hours = int(total_stale_seconds // 3600)
                     minutes = int((total_stale_seconds % 3600) // 60)
                     seconds = int(total_stale_seconds % 60)
@@ -444,7 +435,7 @@ class CheckAPI:
                         source_info=source_info,
                         status_message=status_message,
                     )
-                    self.last_alert_times[display_name] = current_time
+                    self.tracker.record_alert_sent(display_name)
                 else:
                     # Đã gửi alert rồi - chỉ log
                     self.logger_api.info(
@@ -452,35 +443,26 @@ class CheckAPI:
                     )
 
                 # Track consecutive stale days để phát hiện low-activity
-                last_check = self.consecutive_stale_days.get(display_name)
-                if last_check is None:
-                    self.consecutive_stale_days[display_name] = (current_date, 1)
-                else:
-                    last_date, count = last_check
-                    if last_date != current_date:
-                        # Ngày mới
-                        new_count = count + 1
-                        self.consecutive_stale_days[display_name] = (
-                            current_date,
-                            new_count,
-                        )
+                consecutive_days, became_low_activity = (
+                    self.tracker.track_consecutive_stale_days(
+                        display_name, low_activity_threshold_days=2
+                    )
+                )
 
-                        # Nếu >= 2 ngày liên tiếp không có data → low-activity
-                        if new_count >= 2:
-                            self.low_activity_symbols.add(display_name)
-                            self.logger_api.warning(
-                                f"[LOW-ACTIVITY DETECTED] {display_name} đã {new_count} ngày liên tiếp không có data. "
-                                f"Đánh dấu là giao dịch thấp, dừng gửi alert vĩnh viễn."
-                            )
+                if became_low_activity:
+                    self.logger_api.warning(
+                        f"[LOW-ACTIVITY DETECTED] {display_name} đã {consecutive_days} ngày liên tiếp không có data. "
+                        f"Đánh dấu là giao dịch thấp, dừng gửi alert vĩnh viễn."
+                    )
 
             # ===== CASE 2B: Chưa vượt max_stale - Alert bình thường =====
             else:
                 # Đếm số API stale để phát hiện ngày lễ
-                stale_count = len(self.first_stale_times)
+                stale_count = self.tracker.get_stale_count()
                 total_apis = max(stale_count, 1)
 
-                is_suspected_holiday = (not is_data_from_today) and (
-                    stale_count >= max(2, int(total_apis * 0.5))
+                is_suspected_holiday = self.tracker.check_holiday_pattern(
+                    current_date, is_data_from_today, total_apis
                 )
 
                 self.logger_api.warning(
@@ -489,20 +471,14 @@ class CheckAPI:
                 )
 
                 # Kiểm tra alert_frequency
-                last_alert = self.last_alert_times.get(display_name)
-                should_send_alert = False
-
-                if last_alert is None:
-                    should_send_alert = True
-                else:
-                    time_since_last_alert = (current_time - last_alert).total_seconds()
-                    if time_since_last_alert >= alert_frequency:
-                        should_send_alert = True
+                should_send_alert = self.tracker.should_send_alert(
+                    display_name, alert_frequency
+                )
 
                 if should_send_alert:
                     if is_suspected_holiday:
                         # Chỉ gửi alert ngày lễ 1 lần mỗi ngày
-                        if self.last_holiday_alert_date != current_date:
+                        if self.tracker.last_holiday_alert_date != current_date:
                             context_message = (
                                 f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_apis} API đang thiếu data). "
                                 f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
@@ -520,8 +496,8 @@ class CheckAPI:
                                 error_message=context_message,
                                 source_info=source_info,
                             )
-                            self.last_alert_times[display_name] = current_time
-                            self.last_holiday_alert_date = current_date
+                            self.tracker.record_alert_sent(display_name)
+                            self.tracker.last_holiday_alert_date = current_date
                             self.logger_api.info(
                                 f"Đã gửi alert ngày lễ cho {display_name}"
                             )
@@ -544,7 +520,7 @@ class CheckAPI:
                             error_message="Không có dữ liệu mới",
                             source_info=source_info,
                         )
-                        self.last_alert_times[display_name] = current_time
+                        self.tracker.record_alert_sent(display_name)
 
             # Sleep theo check_frequency
             await asyncio.sleep(check_frequency)

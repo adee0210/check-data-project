@@ -4,6 +4,7 @@ from datetime import datetime
 from utils.convert_datetime_util import ConvertDatetimeUtil
 from logic_check.time_validator import TimeValidator
 from logic_check.data_validator import DataValidator
+from utils.alert_tracker_util import AlertTracker
 
 from configs.logging_config import LoggerConfig
 from configs.database_config.database_manager import DatabaseManager
@@ -21,29 +22,13 @@ class CheckDatabase:
         self.task_manager_db = TaskManager()
         self.platform_util = PlatformManager()
 
-        self.last_alert_times = {}
-
-        self.first_stale_times = {}
-        self.suspected_holidays = {}
-
-        self.outside_schedule_logged = {}
-
         self.db_connector = DatabaseManager()
 
         # Symbols cache ở class level để persist qua các reload
         self.symbols_cache = {}
 
-        # Track items vượt quá max_stale_seconds (đã gửi alert "dừng gửi thông báo")
-        self.max_stale_exceeded = {}  # {display_name: datetime}
-
-        # Track low-activity symbols (đã xác nhận giao dịch thấp - không gửi alert nữa)
-        self.low_activity_symbols = set()  # {display_name, ...}
-
-        # Track consecutive days without data (để phát hiện low-activity)
-        self.consecutive_stale_days = {}  # {display_name: (last_check_date, count)}
-
-        # Track last holiday alert date
-        self.last_holiday_alert_date = None  # Last date khi gửi alert "ngày lễ"
+        # Sử dụng AlertTracker để quản lý tất cả tracking
+        self.tracker = AlertTracker()
 
     def _load_config(self):
         """
