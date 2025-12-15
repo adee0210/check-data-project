@@ -13,10 +13,33 @@ class PostgreSQLConnector(BaseDatabaseConnector):
     - Connection pooling
     - Query tối ưu với MAX/MIN aggregations
     - Parameterized queries (ngăn chặn SQL injection)
+    - Auto-reconnect khi connection bị đóng
     """
 
     def __init__(self, logger):
         super().__init__(logger)
+
+    def is_connected(self) -> bool:
+        """
+        Check xem PostgreSQL connection còn active không
+
+        Override để check connection status thực tế, không chỉ check None
+
+        Returns:
+            True nếu connected và active, False nếu không
+        """
+        if self.connection is None:
+            return False
+
+        try:
+            # Test connection bằng cách execute simple query
+            with self.connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            return True
+        except Exception:
+            # Connection đã bị đóng hoặc không còn hoạt động
+            # KHÔNG set self.connection = None để tránh ảnh hưởng các connection pool khác
+            return False
 
     def connect(self, config: Dict[str, Any]) -> Any:
         """
@@ -90,7 +113,9 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             ValueError: Nếu thiếu config hoặc không có kết quả
         """
         if not self.is_connected():
-            raise ConnectionError("Chưa kết nối đến PostgreSQL")
+            raise ConnectionError(
+                "Connection đã bị đóng hoặc chưa kết nối đến PostgreSQL"
+            )
 
         # Validate required fields
         self.validate_config(config, ["table", "column_to_check"])
@@ -140,7 +165,15 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                     raise ValueError("Query không trả về kết quả")
 
         except Exception as e:
-            self.logger.error(f"Lỗi query PostgreSQL: {str(e)}")
+            # Kiểm tra nếu là lỗi connection closed
+            error_str = str(e).lower()
+            if "closed" in error_str or "terminate" in error_str:
+                # KHÔNG set self.connection = None - để database pool manager xử lý
+                self.logger.error(
+                    f"Lỗi query PostgreSQL: {str(e)} - Connection có thể đã bị đóng bởi server"
+                )
+            else:
+                self.logger.error(f"Lỗi query PostgreSQL: {str(e)}")
             raise
 
     def close(self) -> None:
@@ -177,7 +210,9 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             Sorted list of unique symbols
         """
         if not self.is_connected():
-            raise ConnectionError("Chưa kết nối đến PostgreSQL")
+            raise ConnectionError(
+                "Connection đã bị đóng hoặc chưa kết nối đến PostgreSQL"
+            )
 
         try:
             query = f"SELECT DISTINCT {symbol_column} FROM {table_name} ORDER BY {symbol_column}"
@@ -188,5 +223,13 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                 return [row[0] for row in results]
 
         except Exception as e:
-            self.logger.error(f"Lỗi lấy DISTINCT symbols từ PostgreSQL: {str(e)}")
+            # Kiểm tra nếu là lỗi connection closed
+            error_str = str(e).lower()
+            if "closed" in error_str or "terminate" in error_str:
+                # KHÔNG set self.connection = None - để database pool manager xử lý
+                self.logger.error(
+                    f"Lỗi lấy DISTINCT symbols từ PostgreSQL: {str(e)} - Connection có thể đã bị đóng bởi server"
+                )
+            else:
+                self.logger.error(f"Lỗi lấy DISTINCT symbols từ PostgreSQL: {str(e)}")
             raise

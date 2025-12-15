@@ -135,11 +135,14 @@ class DatabaseManager:
             ValueError: Nếu thiếu database.type
             ConnectionError: Nếu không thể kết nối
         """
-        # Reuse existing connector
+        # Reuse existing connector nếu còn connected
         if db_name in self.connectors:
             connector = self.connectors[db_name]
             if connector.is_connected():
                 return connector
+            else:
+                # Connection đã bị đóng, log và reconnect
+                self.logger.info(f"Connection {db_name} đã bị đóng, đang reconnect...")
 
         # Extract database type
         db_cfg = db_config.get("database", {})

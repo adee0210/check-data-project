@@ -79,6 +79,8 @@ class BaseDatabaseConnector(ABC):
         """
         Check xem connection còn active không
 
+        Subclasses có thể override để check connection status cụ thể hơn
+
         Returns:
             True nếu connected, False nếu không
         """
