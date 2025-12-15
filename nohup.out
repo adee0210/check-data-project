@@ -1,0 +1,467 @@
+2025-12-15 13:52:58,853 - MainProcess - INFO - LoadConfigUtil - Đã load config: common_config.json
+2025-12-15 13:52:58,853 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:52:58,853 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:52:58,854 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:52:58,854 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:52:58,854 - MainProcess - INFO - PlatformManager - Đã reload platform config
+2025-12-15 13:52:59,471 - MainProcess - INFO - PlatformManager - Đã gửi system - system - cảnh báo đến Discord thành công
+2025-12-15 13:53:00,353 - MainProcess - INFO - PlatformManager - Đã gửi system - system - cảnh báo đến Telegram thành công
+2025-12-15 13:53:00,359 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:53:00,359 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:53:00,362 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:53:00,362 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:53:00,365 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:53:00,366 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:53:00,368 - MainProcess - INFO - LoadConfigUtil - Đã load config: data_sources_config.json
+2025-12-15 13:53:00,369 - MainProcess - INFO - SymbolResolverUtil - [gold-data] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,369 - MainProcess - INFO - SymbolResolverUtil - [cmc] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:53:00,370 - MainProcess - INFO - SymbolResolverUtil - [cmc] Cache đã hết hạn (cached: 2025-12-12 15:15:30.137254, expiry: 2025-12-13 15:15:30.137254)
+2025-12-15 13:53:00,370 - MainProcess - INFO - SymbolResolverUtil - [cmc] Cache không tồn tại hoặc đã hết hạn, query từ database...
+2025-12-15 13:53:00,449 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: resolver_cmc_db
+2025-12-15 13:53:00,449 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đã cache 3 symbols vào /home/duc_le/check-data-project/cache/symbols_cmc.json
+2025-12-15 13:53:00,449 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đã đồng bộ 3 symbols từ database: ['BNB', 'ETH', 'XRP']
+2025-12-15 13:53:00,450 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:53:00,450 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Cache đã hết hạn (cached: 2025-12-12 15:15:30.279445, expiry: 2025-12-13 15:15:30.279445)
+2025-12-15 13:53:00,450 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Cache không tồn tại hoặc đã hết hạn, query từ database...
+2025-12-15 13:53:00,460 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: resolver_etf_candlestick_db
+2025-12-15 13:53:00,565 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đã cache 17 symbols vào /home/duc_le/check-data-project/cache/symbols_etf_candlestick.json
+2025-12-15 13:53:00,565 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đã đồng bộ 17 symbols từ database: ['E1VFVN30', 'FUEABVND', 'FUEBFVND', 'FUEDCMID', 'FUEFCV50', 'FUEIP100', 'FUEKIV30', 'FUEKIVFS', 'FUEKIVND', 'FUEMAV30', 'FUEMAVND', 'FUESSV30', 'FUESSV50', 'FUESSVFL', 'FUETCC50', 'FUEVFVND', 'FUEVN100']
+2025-12-15 13:53:00,565 - MainProcess - INFO - SymbolResolverUtil - [vn100] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,565 - MainProcess - INFO - SymbolResolverUtil - [vn100_31] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,565 - MainProcess - INFO - CheckAPI - Đã start task mới cho gold-data
+2025-12-15 13:53:00,565 - MainProcess - INFO - CheckAPI - Đã start task mới cho cmc-BNB
+2025-12-15 13:53:00,565 - MainProcess - INFO - CheckAPI - Đã start task mới cho cmc-ETH
+2025-12-15 13:53:00,565 - MainProcess - INFO - CheckAPI - Đã start task mới cho cmc-XRP
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-E1VFVN30
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEABVND
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEBFVND
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEDCMID
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEFCV50
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEIP100
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEKIV30
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEKIVFS
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEKIVND
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEMAV30
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEMAVND
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUESSV30
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUESSV50
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUESSVFL
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUETCC50
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEVFVND
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEVN100
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho vn100
+2025-12-15 13:53:00,566 - MainProcess - INFO - CheckAPI - Đã start task mới cho vn100_31
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [gold-data] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [cmc] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đọc 3 symbols từ cache (cached: 2025-12-15 13:53:00.449784)
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đã đồng bộ 3 symbols từ database: ['BNB', 'ETH', 'XRP']
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đọc 17 symbols từ cache (cached: 2025-12-15 13:53:00.565344)
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đã đồng bộ 17 symbols từ database: ['E1VFVN30', 'FUEABVND', 'FUEBFVND', 'FUEDCMID', 'FUEFCV50', 'FUEIP100', 'FUEKIV30', 'FUEKIVFS', 'FUEKIVND', 'FUEMAV30', 'FUEMAVND', 'FUESSV30', 'FUESSV50', 'FUESSVFL', 'FUETCC50', 'FUEVFVND', 'FUEVN100']
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [btc-dominance] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [ssi] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [vps] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,567 - MainProcess - INFO - SymbolResolverUtil - [vn100] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,568 - MainProcess - INFO - SymbolResolverUtil - [tygia] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho gold-data
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho cmc-BNB
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho cmc-ETH
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho cmc-XRP
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-E1VFVN30
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEABVND
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEBFVND
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEDCMID
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEFCV50
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEIP100
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEKIV30
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEKIVFS
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEKIVND
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEMAV30
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEMAVND
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUESSV30
+2025-12-15 13:53:00,568 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUESSV50
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUESSVFL
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUETCC50
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEVFVND
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEVN100
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho btc-dominance
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho ssi
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho vps
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho vn100
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDatabase - Đã start task mới cho tygia
+2025-12-15 13:53:00,569 - MainProcess - INFO - CheckDisk - Đã start task mới cho tygia
+2025-12-15 13:53:00,579 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:53:00,582 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-BNB - Có dữ liệu mới
+2025-12-15 13:53:00,585 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-ETH - Có dữ liệu mới
+2025-12-15 13:53:00,588 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-XRP - Có dữ liệu mới
+2025-12-15 13:53:00,589 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-E1VFVN30, tạm dừng...
+2025-12-15 13:53:00,589 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEABVND, tạm dừng...
+2025-12-15 13:53:00,589 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEBFVND, tạm dừng...
+2025-12-15 13:53:00,590 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEDCMID, tạm dừng...
+2025-12-15 13:53:00,590 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEFCV50, tạm dừng...
+2025-12-15 13:53:00,590 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEIP100, tạm dừng...
+2025-12-15 13:53:00,591 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIV30, tạm dừng...
+2025-12-15 13:53:00,591 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVFS, tạm dừng...
+2025-12-15 13:53:00,591 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVND, tạm dừng...
+2025-12-15 13:53:00,592 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAV30, tạm dừng...
+2025-12-15 13:53:00,592 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAVND, tạm dừng...
+2025-12-15 13:53:00,592 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV30, tạm dừng...
+2025-12-15 13:53:00,593 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV50, tạm dừng...
+2025-12-15 13:53:00,593 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUESSVFL, tạm dừng...
+2025-12-15 13:53:00,594 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUETCC50, tạm dừng...
+2025-12-15 13:53:00,594 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEVFVND, tạm dừng...
+2025-12-15 13:53:00,594 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEVN100, tạm dừng...
+2025-12-15 13:53:00,615 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:53:00,646 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:53:00,658 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: gold-data
+2025-12-15 13:53:00,658 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:53:00,668 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: cmc
+2025-12-15 13:53:00,669 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-BNB - Có dữ liệu mới
+2025-12-15 13:53:00,670 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-ETH - Có dữ liệu mới
+2025-12-15 13:53:00,670 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-XRP - Có dữ liệu mới
+2025-12-15 13:53:00,671 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-E1VFVN30, tạm dừng...
+2025-12-15 13:53:00,671 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEABVND, tạm dừng...
+2025-12-15 13:53:00,672 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEBFVND, tạm dừng...
+2025-12-15 13:53:00,672 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEDCMID, tạm dừng...
+2025-12-15 13:53:00,672 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEFCV50, tạm dừng...
+2025-12-15 13:53:00,673 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEIP100, tạm dừng...
+2025-12-15 13:53:00,673 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIV30, tạm dừng...
+2025-12-15 13:53:00,673 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVFS, tạm dừng...
+2025-12-15 13:53:00,674 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVND, tạm dừng...
+2025-12-15 13:53:00,674 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAV30, tạm dừng...
+2025-12-15 13:53:00,674 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAVND, tạm dừng...
+2025-12-15 13:53:00,675 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV30, tạm dừng...
+2025-12-15 13:53:00,675 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV50, tạm dừng...
+2025-12-15 13:53:00,675 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUESSVFL, tạm dừng...
+2025-12-15 13:53:00,676 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUETCC50, tạm dừng...
+2025-12-15 13:53:00,676 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEVFVND, tạm dừng...
+2025-12-15 13:53:00,676 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEVN100, tạm dừng...
+2025-12-15 13:53:00,686 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: btc-dominance
+2025-12-15 13:53:00,686 - MainProcess - INFO - CheckDatabase - Kiểm tra database btc-dominance - Có dữ liệu mới
+2025-12-15 13:53:00,695 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: ssi
+2025-12-15 13:53:00,696 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:53:00,705 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: vps
+2025-12-15 13:53:00,706 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:53:00,738 - MainProcess - INFO - DatabaseManager - Kết nối postgresql thành công: vn100
+2025-12-15 13:53:00,741 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:53:00,742 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho tygia, tạm dừng...
+2025-12-15 13:53:00,743 - MainProcess - INFO - CheckDisk - Ngoài lịch kiểm tra cho tygia, tạm dừng...
+2025-12-15 13:53:10,589 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:53:10,622 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:53:10,715 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:53:10,716 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:53:10,717 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:53:10,744 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:53:20,619 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:53:20,629 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:53:20,793 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:53:20,798 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:53:20,802 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:53:20,807 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:53:30,631 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:53:30,637 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:53:30,702 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:53:30,869 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:53:30,870 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:53:30,871 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:53:30,874 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:53:40,673 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:53:40,690 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:53:40,947 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:53:40,952 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:53:40,957 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:53:40,962 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:53:50,689 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:53:50,695 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:53:51,046 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:53:51,050 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:53:51,055 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:53:51,060 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+📤 Gửi alert shutdown: Nhận tín hiệu SIGTERM/SIGINT
+2025-12-15 13:54:00,586 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:00,586 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:00,586 - MainProcess - INFO - PlatformManager - Đã reload platform config
+2025-12-15 13:54:01,109 - MainProcess - INFO - PlatformManager - Đã gửi system - system - lỗi đến Discord thành công
+2025-12-15 13:54:02,013 - MainProcess - INFO - PlatformManager - Đã gửi system - system - lỗi đến Telegram thành công
+⚠️ Chương trình đang thoát...
+📤 Gửi alert shutdown: Chương trình thoát bất thường
+2025-12-15 13:54:02,512 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:02,512 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:02,512 - MainProcess - INFO - PlatformManager - Đã reload platform config
+2025-12-15 13:54:03,182 - MainProcess - INFO - PlatformManager - Đã gửi system - system - lỗi đến Discord thành công
+2025-12-15 13:54:06,702 - MainProcess - INFO - LoadConfigUtil - Đã load config: common_config.json
+2025-12-15 13:54:06,702 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:06,702 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:06,703 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:06,703 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:06,703 - MainProcess - INFO - PlatformManager - Đã reload platform config
+2025-12-15 13:54:07,155 - MainProcess - INFO - PlatformManager - Đã gửi system - system - cảnh báo đến Discord thành công
+2025-12-15 13:54:08,018 - MainProcess - INFO - PlatformManager - Đã gửi system - system - cảnh báo đến Telegram thành công
+2025-12-15 13:54:08,019 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:08,019 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:08,020 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:08,020 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:08,020 - MainProcess - INFO - PlatformManager - Đã load discord notifier (PRIMARY)
+2025-12-15 13:54:08,020 - MainProcess - INFO - PlatformManager - Đã load telegram notifier (PRIMARY)
+2025-12-15 13:54:08,021 - MainProcess - INFO - LoadConfigUtil - Đã load config: data_sources_config.json
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [gold-data] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [cmc] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đọc 3 symbols từ cache (cached: 2025-12-15 13:53:00.449784)
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đã đồng bộ 3 symbols từ database: ['BNB', 'ETH', 'XRP']
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đọc 17 symbols từ cache (cached: 2025-12-15 13:53:00.565344)
+2025-12-15 13:54:08,021 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đã đồng bộ 17 symbols từ database: ['E1VFVN30', 'FUEABVND', 'FUEBFVND', 'FUEDCMID', 'FUEFCV50', 'FUEIP100', 'FUEKIV30', 'FUEKIVFS', 'FUEKIVND', 'FUEMAV30', 'FUEMAVND', 'FUESSV30', 'FUESSV50', 'FUESSVFL', 'FUETCC50', 'FUEVFVND', 'FUEVN100']
+2025-12-15 13:54:08,022 - MainProcess - INFO - SymbolResolverUtil - [vn100] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,022 - MainProcess - INFO - SymbolResolverUtil - [vn100_31] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho gold-data
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho cmc-BNB
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho cmc-ETH
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho cmc-XRP
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-E1VFVN30
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEABVND
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEBFVND
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEDCMID
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEFCV50
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEIP100
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEKIV30
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEKIVFS
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEKIVND
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEMAV30
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEMAVND
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUESSV30
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUESSV50
+2025-12-15 13:54:08,022 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUESSVFL
+2025-12-15 13:54:08,023 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUETCC50
+2025-12-15 13:54:08,023 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEVFVND
+2025-12-15 13:54:08,023 - MainProcess - INFO - CheckAPI - Đã start task mới cho etf_candlestick-FUEVN100
+2025-12-15 13:54:08,023 - MainProcess - INFO - CheckAPI - Đã start task mới cho vn100
+2025-12-15 13:54:08,023 - MainProcess - INFO - CheckAPI - Đã start task mới cho vn100_31
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [gold-data] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [cmc] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đọc 3 symbols từ cache (cached: 2025-12-15 13:53:00.449784)
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [cmc] Đã đồng bộ 3 symbols từ database: ['BNB', 'ETH', 'XRP']
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] symbols.auto_sync=true, tự động lấy symbols từ database...
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đọc 17 symbols từ cache (cached: 2025-12-15 13:53:00.565344)
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [etf_candlestick] Đã đồng bộ 17 symbols từ database: ['E1VFVN30', 'FUEABVND', 'FUEBFVND', 'FUEDCMID', 'FUEFCV50', 'FUEIP100', 'FUEKIV30', 'FUEKIVFS', 'FUEKIVND', 'FUEMAV30', 'FUEMAVND', 'FUESSV30', 'FUESSV50', 'FUESSVFL', 'FUETCC50', 'FUEVFVND', 'FUEVN100']
+2025-12-15 13:54:08,023 - MainProcess - INFO - SymbolResolverUtil - [btc-dominance] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,024 - MainProcess - INFO - SymbolResolverUtil - [ssi] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,024 - MainProcess - INFO - SymbolResolverUtil - [vps] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,024 - MainProcess - INFO - SymbolResolverUtil - [vn100] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,024 - MainProcess - INFO - SymbolResolverUtil - [tygia] symbols.auto_sync=null, API không cần symbols
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho gold-data
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho cmc-BNB
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho cmc-ETH
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho cmc-XRP
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-E1VFVN30
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEABVND
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEBFVND
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEDCMID
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEFCV50
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEIP100
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEKIV30
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEKIVFS
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEKIVND
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEMAV30
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEMAVND
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUESSV30
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUESSV50
+2025-12-15 13:54:08,024 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUESSVFL
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUETCC50
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEVFVND
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho etf_candlestick-FUEVN100
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho btc-dominance
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho ssi
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho vps
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho vn100
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDatabase - Đã start task mới cho tygia
+2025-12-15 13:54:08,025 - MainProcess - INFO - CheckDisk - Đã start task mới cho tygia
+2025-12-15 13:54:08,034 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:54:08,038 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-BNB - Có dữ liệu mới
+2025-12-15 13:54:08,041 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-ETH - Có dữ liệu mới
+2025-12-15 13:54:08,044 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-XRP - Có dữ liệu mới
+2025-12-15 13:54:08,044 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-E1VFVN30, tạm dừng...
+2025-12-15 13:54:08,045 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEABVND, tạm dừng...
+2025-12-15 13:54:08,045 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEBFVND, tạm dừng...
+2025-12-15 13:54:08,045 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEDCMID, tạm dừng...
+2025-12-15 13:54:08,046 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEFCV50, tạm dừng...
+2025-12-15 13:54:08,046 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEIP100, tạm dừng...
+2025-12-15 13:54:08,046 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIV30, tạm dừng...
+2025-12-15 13:54:08,047 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVFS, tạm dừng...
+2025-12-15 13:54:08,047 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVND, tạm dừng...
+2025-12-15 13:54:08,047 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAV30, tạm dừng...
+2025-12-15 13:54:08,048 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAVND, tạm dừng...
+2025-12-15 13:54:08,048 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV30, tạm dừng...
+2025-12-15 13:54:08,048 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV50, tạm dừng...
+2025-12-15 13:54:08,049 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUESSVFL, tạm dừng...
+2025-12-15 13:54:08,049 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUETCC50, tạm dừng...
+2025-12-15 13:54:08,049 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEVFVND, tạm dừng...
+2025-12-15 13:54:08,050 - MainProcess - INFO - CheckAPI - Ngoài lịch kiểm tra cho etf_candlestick-FUEVN100, tạm dừng...
+2025-12-15 13:54:08,055 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:54:08,083 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:54:08,125 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: gold-data
+2025-12-15 13:54:08,126 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:54:08,135 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: cmc
+2025-12-15 13:54:08,135 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-BNB - Có dữ liệu mới
+2025-12-15 13:54:08,136 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-ETH - Có dữ liệu mới
+2025-12-15 13:54:08,137 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-XRP - Có dữ liệu mới
+2025-12-15 13:54:08,137 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-E1VFVN30, tạm dừng...
+2025-12-15 13:54:08,138 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEABVND, tạm dừng...
+2025-12-15 13:54:08,138 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEBFVND, tạm dừng...
+2025-12-15 13:54:08,138 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEDCMID, tạm dừng...
+2025-12-15 13:54:08,139 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEFCV50, tạm dừng...
+2025-12-15 13:54:08,139 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEIP100, tạm dừng...
+2025-12-15 13:54:08,139 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIV30, tạm dừng...
+2025-12-15 13:54:08,140 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVFS, tạm dừng...
+2025-12-15 13:54:08,140 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEKIVND, tạm dừng...
+2025-12-15 13:54:08,140 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAV30, tạm dừng...
+2025-12-15 13:54:08,141 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEMAVND, tạm dừng...
+2025-12-15 13:54:08,141 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV30, tạm dừng...
+2025-12-15 13:54:08,141 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUESSV50, tạm dừng...
+2025-12-15 13:54:08,142 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUESSVFL, tạm dừng...
+2025-12-15 13:54:08,142 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUETCC50, tạm dừng...
+2025-12-15 13:54:08,142 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEVFVND, tạm dừng...
+2025-12-15 13:54:08,143 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho etf_candlestick-FUEVN100, tạm dừng...
+2025-12-15 13:54:08,152 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: btc-dominance
+2025-12-15 13:54:08,152 - MainProcess - INFO - CheckDatabase - Kiểm tra database btc-dominance - Có dữ liệu mới
+2025-12-15 13:54:08,162 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: ssi
+2025-12-15 13:54:08,162 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:54:08,171 - MainProcess - INFO - DatabaseManager - Kết nối mongodb thành công: vps
+2025-12-15 13:54:08,172 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:54:08,214 - MainProcess - INFO - DatabaseManager - Kết nối postgresql thành công: vn100
+2025-12-15 13:54:08,218 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:54:08,219 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho tygia, tạm dừng...
+2025-12-15 13:54:08,220 - MainProcess - INFO - CheckDisk - Ngoài lịch kiểm tra cho tygia, tạm dừng...
+2025-12-15 13:54:18,066 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:54:18,078 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:54:18,181 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:54:18,186 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:54:18,191 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:54:18,224 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:54:28,076 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:54:28,084 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:54:28,270 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:54:28,275 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:54:28,279 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:54:28,284 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:54:38,085 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:54:38,089 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:54:38,163 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:54:38,301 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:54:38,302 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:54:38,303 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:54:38,307 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:54:48,095 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:54:48,099 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:54:48,334 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:54:48,336 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:54:48,337 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:54:48,339 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:54:58,105 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:54:58,110 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:54:58,368 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:54:58,369 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:54:58,370 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:54:58,371 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:55:08,052 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-BNB - Có dữ liệu mới
+2025-12-15 13:55:08,055 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-ETH - Có dữ liệu mới
+2025-12-15 13:55:08,058 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-XRP - Có dữ liệu mới
+2025-12-15 13:55:08,113 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:55:08,118 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:55:08,138 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-BNB - Có dữ liệu mới
+2025-12-15 13:55:08,139 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-ETH - Có dữ liệu mới
+2025-12-15 13:55:08,140 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-XRP - Có dữ liệu mới
+2025-12-15 13:55:08,154 - MainProcess - INFO - CheckDatabase - Kiểm tra database btc-dominance - Có dữ liệu mới
+2025-12-15 13:55:08,165 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:55:08,397 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:55:08,398 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:55:08,399 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:55:08,401 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:55:18,123 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:55:18,129 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:55:18,439 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:55:18,444 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:55:18,449 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:55:18,453 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:55:28,135 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:55:28,140 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:55:28,480 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:55:28,482 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:55:28,483 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:55:28,486 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:55:38,116 - MainProcess - INFO - LoadConfigUtil - Phát hiện thay đổi config file: data_sources_config.json, đang reload...
+2025-12-15 13:55:38,117 - MainProcess - INFO - LoadConfigUtil - Đã load config: data_sources_config.json
+2025-12-15 13:55:38,147 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:55:38,153 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:55:38,167 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:55:38,582 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:55:38,587 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:55:38,591 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:55:38,596 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:55:48,159 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:55:48,163 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:55:48,618 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:55:48,621 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:55:48,622 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:55:48,625 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:55:58,168 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:55:58,173 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:55:58,713 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:55:58,716 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:55:58,717 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:55:58,719 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:56:08,067 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-BNB - Có dữ liệu mới
+2025-12-15 13:56:08,070 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-ETH - Có dữ liệu mới
+2025-12-15 13:56:08,073 - MainProcess - INFO - CheckAPI - Kiểm tra API cmc-XRP - Có dữ liệu mới
+2025-12-15 13:56:08,140 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-BNB - Có dữ liệu mới
+2025-12-15 13:56:08,142 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-ETH - Có dữ liệu mới
+2025-12-15 13:56:08,143 - MainProcess - INFO - CheckDatabase - Kiểm tra database cmc-XRP - Có dữ liệu mới
+2025-12-15 13:56:08,159 - MainProcess - INFO - CheckDatabase - Kiểm tra database btc-dominance - Có dữ liệu mới
+2025-12-15 13:56:08,169 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:56:08,178 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:56:08,184 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:56:08,222 - MainProcess - INFO - CheckDatabase - Trong lịch kiểm tra cho tygia, tiếp tục...
+2025-12-15 13:56:08,238 - MainProcess - INFO - DatabaseManager - Kết nối postgresql thành công: tygia
+2025-12-15 13:56:08,241 - MainProcess - INFO - CheckDatabase - Kiểm tra database tygia - Có dữ liệu mới
+2025-12-15 13:56:08,242 - MainProcess - INFO - CheckDisk - Trong lịch kiểm tra cho tygia, tiếp tục...
+2025-12-15 13:56:08,248 - MainProcess - INFO - CheckDisk - Kiểm tra disk tygia - Có dữ liệu mới
+2025-12-15 13:56:08,792 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:56:08,795 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:56:08,796 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:56:08,799 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:56:18,215 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:56:18,222 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:56:18,244 - MainProcess - INFO - CheckDatabase - Kiểm tra database tygia - Có dữ liệu mới
+2025-12-15 13:56:18,256 - MainProcess - INFO - CheckDisk - Kiểm tra disk tygia - Có dữ liệu mới
+2025-12-15 13:56:18,828 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:56:18,831 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:56:18,832 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:56:18,834 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:56:28,164 - MainProcess - INFO - LoadConfigUtil - Phát hiện thay đổi config file: data_sources_config.json, đang reload...
+2025-12-15 13:56:28,165 - MainProcess - INFO - LoadConfigUtil - Đã load config: data_sources_config.json
+2025-12-15 13:56:28,226 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:56:28,235 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:56:28,249 - MainProcess - INFO - CheckDatabase - Ngoài lịch kiểm tra cho tygia, tạm dừng...
+2025-12-15 13:56:28,258 - MainProcess - INFO - CheckDisk - Ngoài lịch kiểm tra cho tygia, tạm dừng...
+2025-12-15 13:56:28,950 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:56:28,953 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:56:28,954 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:56:28,957 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:56:38,171 - MainProcess - INFO - CheckDatabase - Kiểm tra database ssi - Có dữ liệu mới
+2025-12-15 13:56:38,236 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:56:38,240 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:56:38,993 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:56:38,994 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:56:38,995 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:56:38,998 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:56:48,245 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:56:48,250 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:56:49,091 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:56:49,096 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:56:49,100 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:56:49,105 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới
+2025-12-15 13:56:58,270 - MainProcess - INFO - CheckAPI - Kiểm tra API gold-data - Có dữ liệu mới
+2025-12-15 13:56:58,276 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100 - Có dữ liệu mới
+2025-12-15 13:56:59,179 - MainProcess - INFO - CheckAPI - Kiểm tra API vn100_31 - Có dữ liệu mới
+2025-12-15 13:56:59,184 - MainProcess - INFO - CheckDatabase - Kiểm tra database gold-data - Có dữ liệu mới
+2025-12-15 13:56:59,188 - MainProcess - INFO - CheckDatabase - Kiểm tra database vps - Có dữ liệu mới
+2025-12-15 13:56:59,193 - MainProcess - INFO - CheckDatabase - Kiểm tra database vn100 - Có dữ liệu mới

@@ -23,7 +23,7 @@ start() {
     fi
 
     if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
+        PID=$(cat "$PID_FILE" | tr -d '\0')
         if ps -p "$PID" > /dev/null 2>&1; then
             echo "Hệ thống giám sát dữ liệu đang chạy (PID: $PID)"
             return 1
@@ -49,7 +49,7 @@ stop() {
         return 1
     fi
 
-    PID=$(cat "$PID_FILE")
+    PID=$(cat "$PID_FILE" | tr -d '\0')
     if ps -p "$PID" > /dev/null 2>&1; then
         echo "Đang dừng hệ thống giám sát dữ liệu (PID: $PID)..."
         kill "$PID"
@@ -75,7 +75,7 @@ restart() {
 
 status() {
     if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
+        PID=$(cat "$PID_FILE" | tr -d '\0')
         if ps -p "$PID" > /dev/null 2>&1; then
             echo "Hệ thống giám sát dữ liệu đang chạy (PID: $PID)"
             echo "Thư mục log: $LOG_DIR/"
