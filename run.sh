@@ -36,7 +36,7 @@ start() {
     echo "Đang khởi động hệ thống giám sát dữ liệu..."
     echo "File log: $LOG_DIR/"
     cd "$SCRIPT_DIR"
-    nohup bash -c "source $SCRIPT_DIR/.venv/bin/activate && $SCRIPT_DIR/.venv/bin/python $SCRIPT_DIR/src/main.py" &
+    nohup bash -c "source $SCRIPT_DIR/.venv/bin/activate && $SCRIPT_DIR/.venv/bin/python $SCRIPT_DIR/src/main.py" > /dev/null 2>&1 &
     echo $! > "$PID_FILE"
     echo "Hệ thống đã khởi động thành công (PID: $(cat "$PID_FILE"))"
     echo "Sử dụng lệnh 'tail -f $LOG_DIR/api.log' để xem log API"
