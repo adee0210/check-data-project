@@ -1,6 +1,167 @@
 **Tổng quan dự án**
 
-Hệ thống trong repository này là check dữ liệu (data monitoring) chạy liên tục, check dữ liệu từ ba nguồn chính: API, cơ sở dữ liệu (MongoDB/PostgreSQL) và file trên disk. Hệ thống phát hiện dữ liệu cũ, quản lý gửi cảnh báo (Discord/Telegram) và hỗ trợ lịch kiểm tra cùng danh sách symbol cấu hình được đồng bộ.
+---
+
+**QUICK START**
+
+1) Tạo môi trường ảo và cài phụ thuộc:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+2) Chạy dịch vụ (Linux/macOS):
+
+```bash
+./run.sh
+# hoặc
+python src/main.py
+```
+
+3) Kiểm tra log: xem thư mục `logs/`.
+
+**MỤC LỤC README (tóm tắt)**
+- Quick Start (đã có)
+- Cấu hình (giải thích `configs/data_sources_config.json`)
+- Modules & Luồng xử lý
+- Sơ đồ kiến trúc (Mermaid)
+- Vận hành & Troubleshooting
+- Các bước tiếp theo (tuỳ chọn)
+
+**CẤU HÌNH CHI TIẾT (`configs/data_sources_config.json`)**
+
+Tổng quan: mỗi khóa top-level là một nguồn dữ liệu (ví dụ `cmc`, `vn100`). Mỗi nguồn có thể chứa một hoặc nhiều phần: `api`, `database`, `disk`, `symbols`, `check`, `schedule`.
+
+Các trường phổ biến:
+
+- `enabled` (boolean): bật/tắt kiểm tra cho nguồn này.
+- `type` (string, tuỳ chọn): `api` | `db` | `disk` — loại nguồn chính.
+
+- `api` (object):
+  - `enable` (bool)
+  - `url` (string): endpoint; có thể chứa `{symbol}`
+  - `method` (string): `GET` hoặc `POST`
+  - `headers` (object)
+  - `params` (object)
+  - `timeout_seconds` (int)
+  - `record_pointer` (int): index trong array trả về (0 = first/newest theo API, -1 = last/oldest)
+  - `column_to_check` (string): tên trường chứa timestamp
+  - `nested_list` (bool): true nếu response có nested list
+
+- `database` (object):
+  - `enable` (bool)
+  - `type` / `engine` (string): `mongodb` | `postgresql`
+  - `connection_name` (string): key trỏ tới cấu hình DB trong `common_config.json`
+  - `database` (string)
+  - `collection_name` / `table` (string)
+  - `query` (object|string): template query hoặc SQL
+  - `time_field` / `column_to_check` (string)
+  - `record_pointer` (int): 0 = newest, -1 = oldest
+
+- `disk` (object):
+  - `enable` (bool)
+  - `file_path` (string): có thể dùng `{symbol}`
+  - `file_type` (string): `json` | `csv` | `txt` | `mtime`
+  - `record_pointer` (int)
+  - `column_to_check` (string)
+
+- `symbols` (object):
+  - `auto_sync` (bool|null): true → lấy distinct từ DB; false → dùng `values`; null → không dùng symbol
+  - `values` (array): danh sách symbol tĩnh
+  - `file_path` (string): đường dẫn file chứa symbol
+  - `column` (string): tên cột để lấy distinct
+  - `cache_seconds` (int): thời gian cache symbols (mặc định 86400)
+
+- `check` (object):
+  - `enabled` (bool)
+  - `timezone_offset` (int): giờ lệch so với UTC (mặc định 7)
+  - `allow_delay` (int, seconds): khoảng cho phép
+  - `check_frequency` (int, seconds)
+  - `alert_frequency` (int, seconds)
+  - `max_stale_seconds` (int|null)
+  - `error_on_missing` (bool)
+  - `time_field` / `time_format` / `time_format_string` (khi custom)
+
+- `schedule` (object):
+  - `valid_days` (array|null): [0..6], 0 = Thứ Hai
+  - `time_ranges` (string|array|null): null = 24/7, hoặc "HH:MM-HH:MM" hoặc danh sách
+
+Ví dụ rút gọn (API + symbols inline):
+
+```json
+"cmc": {
+  "enabled": true,
+  "api": {"enable": true, "url": "https://api.example.com/data?symbol={symbol}", "record_pointer": 0, "column_to_check": "timestamp"},
+  "symbols": {"auto_sync": false, "values": ["BTC","ETH"], "cache_seconds": 86400},
+  "check": {"enabled": true, "allow_delay": 1800, "check_frequency": 60, "alert_frequency": 300}
+}
+```
+
+Ghi chú vận hành:
+- Nếu chỉ cần API → chỉ cấu hình `api`.
+- Nếu `symbols.auto_sync=true` cần cung cấp `symbols.column` và `database` để resolver lấy distinct.
+- `record_pointer` phụ thuộc định dạng trả về của API / file.
+
+**MODULES & LUỒNG XỬ LÝ (tóm tắt)**
+
+- `src/main.py` — đọc config, khởi logger, tạo asyncio tasks cho từng checker, xử lý signal (shutdown/cleanup).
+- `src/check/check_api.py` — `CheckAPI`:
+  - Lấy symbols (`SymbolResolverUtil`);
+  - Gọi API (theo symbol nếu cần);
+  - Lấy `time_field`, parse (`ConvertDatetimeUtil`), so sánh với giờ hiện tại (`TimeValidator`);
+  - `AlertTracker` quyết định gửi hay ngưng gửi;
+  - `PlatformManager` gửi alert qua Discord/Telegram.
+- `src/check/check_database.py` — `CheckDatabase`:
+  - Dùng `DatabaseManager` để lấy connector (Mongo/Postgres);
+  - Thực hiện query để lấy timestamp (MAX/MIN) theo `record_pointer`;
+  - Áp cùng luồng validate/alert.
+- `src/check/check_disk.py` — `CheckDisk`:
+  - Đọc file (json/csv/txt hoặc mtime), parse datetime, áp luồng validate/alert.
+- `src/utils/*`:
+  - `LoadConfigUtil`: đọc config với caching theo mtime;
+  - `SymbolResolverUtil`: resolve và cache symbols vào `cache/`;
+  - `ConvertDatetimeUtil`: parse ISO, epoch, custom format;
+  - `TimeValidator`: kiểm tra schedule (UTC+7 mặc định);
+  - `AlertTracker`: theo dõi last alert, avoid spam;
+  - `PlatformManager`: tạo và gửi tới notifier.
+
+**SƠ ĐỒ KIẾN TRÚC (Mermaid)**
+
+```mermaid
+flowchart TD
+  Main[main.py] --> Checkers{Checkers}
+  Checkers --> API[CheckAPI]
+  Checkers --> DB[CheckDatabase]
+  Checkers --> Disk[CheckDisk]
+  API --> Symbols[SymbolResolver]
+  API --> Conv[ConvertDatetimeUtil]
+  API --> TV[TimeValidator]
+  API --> AT[AlertTracker]
+  AT --> PM[PlatformManager]
+  PM --> Discord[DiscordNotifier]
+  PM --> Telegram[TelegramNotifier]
+  DB --> DBM[DatabaseManager]
+  DBM --> Mongo[MongoConnector]
+  DBM --> Postgres[PostgresConnector]
+  Disk --> FS[FileSystem]
+```
+
+**VẬN HÀNH & TROUBLESHOOTING**
+
+- Logs: kiểm tra `logs/` để xem chi tiết lỗi.
+- Nếu không nhận được alert: kiểm tra `configs/common_config.json` (webhook/token/chat_id) và trạng thái `is_primary` trong cấu hình platform.
+- Để test nhanh: giảm `check.allow_delay` hoặc `check.check_frequency` cho nguồn cần kiểm thử.
+- Bảo mật: không lưu credential công khai trong repo; dùng biến môi trường hoặc secrets manager.
+
+**TIẾP THEO (tuỳ chọn thực hiện tiếp)**
+
+- Tạo file `configs/data_sources_config.example.json` (redacted) — tiện dùng để cấu hình môi trường.
+- Thêm unit tests cho `TimeValidator` và `DataValidator`.
+- Hoàn thiện ví dụ cụ thể cho từng nguồn hiện có trong repo.
+
+Nếu cần thực hiện phần nào trong danh sách trên, gửi chỉ định hành động mong muốn.
 
 **Sơ đồ kiến trúc**
 
@@ -244,35 +405,120 @@ Yêu cầu trước khi chạy:
 
 Khởi chạy nhanh (Linux):
 ```bash
-# từ thư mục dự án
-./run.sh start    # tạo .venv, cài dependencies và chạy nền
-./run.sh status   # kiểm tra trạng thái và xem log
-./run.sh stop     # dừng ứng dụng
+**QUICK START — CHẠY NHANH**
+
+1) Tạo môi trường ảo và cài phụ thuộc:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Windows: sử dụng `run.ps1` với PowerShell.
+2) Chạy dịch vụ (linux/mac):
 
-Log PID:
-- Log nằm trong thư mục `logs/` (cấu hình ở `configs/logging_config.py`): `main.log`, `api.log`, `database.log`, `disk.log`.
-- File PID tạo bởi `run.sh`: `check_data.pid`.
+```bash
+./run.sh
+# hoặc
+python src/main.py
+```
 
-**Trước khi chạy — checklist cấu hình**
-- Cập nhật `configs/common_config.json` với thông tin platform (Discord webhook, Telegram bot token/chat id) và thông tin DB (`POSTGRE_CONFIG`, `MONGO_CONFIG`).
-- Cập nhật `configs/data_sources_config.json` để bật/tắt nguồn dữ liệu, thiết lập `url`, `database`, `collection_name`/`table`, `symbols`, và các tham số `check`/`schedule`.
+3) Kiểm tra logs: thư mục `logs/` chứa file log quay vòng (RotatingFileHandler).
 
-**Mở rộng hệ thống**
+**CẤU HÌNH (TỔNG QUAN)**
 
-- Thêm notifier mới: tạo subclass của `BasePlatformNotifier` trong `src/utils/platform_util/` và đăng ký vào `PlatformManager.NOTIFIER_REGISTRY`.
-- Thêm loại database mới: implement subclass của `BaseDatabaseConnector` trong `configs/database_config/` và đăng ký vào `DatabaseManager.CONNECTOR_REGISTRY`.
+- File chính: `configs/common_config.json` — chứa thông tin nền tảng thông báo (Discord webhook, Telegram token/chat_id) và cấu hình DB chung.
+- File chuyên biệt: `configs/data_sources_config.json` — danh sách các nguồn dữ liệu (mỗi nguồn có các trường `api`, `database`, `disk`, `symbols`, `check`, `schedule`).
 
-**Bảo mật & vận hành**
+Phần dưới đây giải thích chi tiết từng trường trong `configs/data_sources_config.json` (mẫu và ý nghĩa).
 
-- `LoadConfigUtil` có cơ chế cache và tự reload khi file thay đổi (dựa trên `mtime`).
+**Giải thích `configs/data_sources_config.json` (chi tiết)**
 
-**Các file quan trọng (tóm tắt)**
-- Cấu hình: [configs/common_config.json](configs/common_config.json), [configs/data_sources_config.json](configs/data_sources_config.json)
-- Entrypoint: [src/main.py](src/main.py)
-- Checkers: [src/check/check_api.py](src/check/check_api.py), [src/check/check_database.py](src/check/check_database.py), [src/check/check_disk.py](src/check/check_disk.py)
-- DB connectors: [configs/database_config/mongo_config.py](configs/database_config/mongo_config.py), [configs/database_config/postgres_config.py](configs/database_config/postgres_config.py)
-- Platform: [src/utils/platform_util/platform_manager.py](src/utils/platform_util/platform_manager.py), [src/utils/platform_util/discord_util.py](src/utils/platform_util/discord_util.py), [src/utils/platform_util/telegram_util.py](src/utils/platform_util/telegram_util.py)
-- Utils: [src/utils/load_config_util.py](src/utils/load_config_util.py), [src/utils/symbol_resolver_util.py](src/utils/symbol_resolver_util.py), [src/utils/convert_datetime_util.py](src/utils/convert_datetime_util.py), [src/utils/alert_tracker_util.py](src/utils/alert_tracker_util.py)
+Mỗi entry (ví dụ `cmc`, `vn100`) là một nguồn dữ liệu. Cấu trúc phổ biến:
+
+- `enabled` (boolean): bật/tắt kiểm tra cho nguồn này.
+- `type` (string, optional): `api` | `db` | `disk` — loại nguồn chính.
+- `api` (object, khi `type` là `api` hoặc cần gọi HTTP):
+  - `url`: endpoint
+  - `method`: `GET` | `POST`
+  - `headers`: object
+  - `params`: object (được nối vào query string)
+  - `timeout_seconds`: số giây chờ
+
+- `database` (object, khi kiểm tra từ DB):
+  - `engine`: `mongo` | `postgres`
+  - `connection_name`: tên khóa trỏ tới `configs/common_config.json` (ví dụ `MONGO_CONFIG`)
+  - `collection` / `table`: nơi query
+  - `query`: object hoặc SQL string (tùy engine)
+  - `time_field`: tên trường chứa timestamp
+
+- `disk` (object, khi đọc file):
+  - `path`: đường dẫn tới file hoặc thư mục
+  - `format`: `json` | `csv` | `txt` | `mtime` (mtime = dùng thời gian sửa file)
+  - `match_pattern`: (tuỳ chọn) glob pattern
+
+- `symbols` (object): định nghĩa danh sách symbols để kiểm tra
+  - `mode`: `inline` | `file` | `cmc` | `db`
+  - `list`: ["SYM1", "SYM2"] (khi `inline`)
+  - `file_path`: đường dẫn file chứa symbols (khi `file`)
+  - `cache_seconds`: thời gian cache symbols (mặc định 86400 — 24h)
+
+- `check` (object): luật kiểm tra
+  - `enabled`: boolean
+  - `time_field`: tên trường datetime trong payload (ví dụ `timestamp`)
+  - `time_format`: `iso` | `unix` | `custom` (khi custom cần `time_format_string`)
+  - `threshold_minutes`: quá trình được coi là "cũ" nếu timestamp cách thời điểm hiện tại quá giá trị này (phút)
+  - `error_on_missing`: boolean — nếu true và không tìm thấy record => cảnh báo
+
+- `schedule` (object): lịch kiểm tra
+  - `interval_seconds`: tần suất chạy (mặc định 300)
+  - `at_times`: ["09:00","12:00"] — các thời điểm cố định trong ngày (tùy chọn)
+
+Ví dụ một entry rút gọn:
+
+```json
+"cmc": {
+  "enabled": true,
+  "type": "api",
+  "api": {
+    "url": "https://api.example.com/data",
+    "method": "GET",
+    "timeout_seconds": 10
+  },
+  "symbols": {
+    "mode": "inline",
+    "list": ["BTC","ETH"],
+    "cache_seconds": 86400
+  },
+  "check": {
+    "enabled": true,
+    "time_field": "timestamp",
+    "time_format": "iso",
+    "threshold_minutes": 30,
+    "error_on_missing": true
+  },
+  "schedule": {"interval_seconds": 300}
+}
+```
+
+Ghi chú:
+- Một số nguồn chỉ cần `api`, một số khác cần `database` hoặc `disk`.
+- Trường `symbols` cho phép lấy danh sách động (từ file, từ API như CMC, hoặc inline). Hệ thống cache symbols trong thư mục `cache/` để giảm tải.
+
+**MODULES & LUỒNG XỬ LÝ (TÓM TẮT)**
+
+- `src/main.py` — entrypoint: đọc config, khởi logger, tạo tasks cho từng checker và xử lý signal (shutdown / restart alert).
+- `src/check/check_api.py` — `CheckAPI`: for each source:
+  - lấy danh sách symbols (`SymbolResolverUtil`),
+  - gọi HTTP (`api`), parse trả về, lấy giá trị `time_field`,
+  - chuyển format (`ConvertDatetimeUtil`) → so sánh với giờ hiện tại (`TimeValidator`),
+  - nếu vi phạm threshold ⇒ `AlertTracker` quyết định có gửi hay bỏ qua ⇒ `PlatformManager` gửi thông báo.
+- `src/check/check_database.py` — `CheckDatabase`: kết nối qua `DatabaseManager` (factory), thực hiện query để lấy timestamp lớn nhất/nhỏ nhất, áp cùng logic `TimeValidator`/`AlertTracker`.
+- `src/check/check_disk.py` — `CheckDisk`: đọc file/mtime, apply same validation.
+- `src/utils/*`:
+  - `LoadConfigUtil`: đọc config JSON với caching & reload on change.
+  - `SymbolResolverUtil`: resolve symbols + cache vào `cache/`.
+  - `ConvertDatetimeUtil`: parse nhiều dạng timestamp.
+  - `TimeValidator`: so sánh datetime với threshold (hỗ trợ timezone VN+7 mặc định).
+  - `AlertTracker`: throttle/avoid duplicate alerts.
+  - `PlatformManager` + `platform_util/*`: tạo notifier cho Discord/Telegram.
