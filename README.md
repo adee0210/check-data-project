@@ -1,544 +1,278 @@
-<!-- README for check-data-project - Clean and Pretty -->
-# Check Data Project — Giám sát tính cập nhật dữ liệu
+**Tổng quan dự án**
 
-Phiên bản ngắn gọn: hướng dẫn cài đặt, cấu hình nhanh và các quy tắc alert chính.
+Hệ thống trong repository này là check dữ liệu (data monitoring) chạy liên tục, check dữ liệu từ ba nguồn chính: API, cơ sở dữ liệu (MongoDB/PostgreSQL) và file trên disk. Hệ thống phát hiện dữ liệu cũ, quản lý gửi cảnh báo (Discord/Telegram) và hỗ trợ lịch kiểm tra cùng danh sách symbol cấu hình được đồng bộ.
 
----
+**Sơ đồ kiến trúc**
 
-## Mục lục
+Quan hệ chính giữa các module:
 
-- [Tổng quan](#tổng-quan)
-- [Yêu cầu & Cài đặt](#yêu-cầu--cài-đặt)
-- [Cấu hình nhanh](#cấu-hình-nhanh)
-- [Chạy hệ thống](#chạy-hệ-thống)
-- [Quy tắc cảnh báo](#quy-tắc-cảnh-báo)
-- [Ví dụ cấu hình](#ví-dụ-cấu-hình)
-- [Mở rộng](#mở-rộng)
-- [Troubleshooting](#troubleshooting)
-- [FAQ](#faq)
-- [License](#license)
+- `src/main.py` -> khởi chạy các tác vụ bất đồng bộ -> {`CheckAPI`, `CheckDatabase`, `CheckDisk`}
+- `CheckAPI` -> sử dụng -> {`LoadConfigUtil`, `SymbolResolverUtil`, `ConvertDatetimeUtil`, `TimeValidator`, `DataValidator`, `AlertTracker`, `PlatformManager`}
+- `CheckDatabase` -> sử dụng -> {`DatabaseManager` -> (`MongoDBConnector`, `PostgreSQLConnector`), `ConvertDatetimeUtil`, `TimeValidator`, `DataValidator`, `AlertTracker`, `PlatformManager`}
+- `CheckDisk` -> sử dụng -> {`ConvertDatetimeUtil`, `TimeValidator`, `DataValidator`, `AlertTracker`, `PlatformManager`}
 
----
 
-## Tổng quan
+Utils:
+- `LoadConfigUtil`: load file cấu hình JSON, caching và auto-reload khi file thay đổi
+- `SymbolResolverUtil`: danh sách `symbols` (cache vào `/cache` trong 24h)
+- `ConvertDatetimeUtil`: parse và chuyển đổi các dạng datetime
+- `AlertTracker`: quản lý trạng thái alert (frequency, silent mode, low-activity...)
+- `TaskManager`: helper tạo và chạy asyncio tasks
 
-`check-data-project` giám sát tính cập nhật của dữ liệu từ:
-- **API** (JSON)
-- **Database** (MongoDB, PostgreSQL)
-- **Disk files** (JSON/CSV/TXT/mtime)
+Lớp platform (gửi thông báo):
+- `PlatformManager` tạo các notifier {`DiscordNotifier`, `TelegramNotifier`} từ `configs/common_config.json`.
 
-Hệ thống gửi alert qua **Discord/Telegram** (cấu hình trong `configs/common_config.json`).
+Lớp database:
+- `configs/database_config/*`: `BaseDatabaseConnector`, `MongoDBConnector`, `PostgreSQLConnector` và `DatabaseManager` (factory + cache connector).
 
-**Điểm nổi bật:**
-- Thêm lớp `AlertTracker` tại `src/utils/alert_tracker_util.py` để quản lý trạng thái alert chung: tracking `empty data`, `silent mode` khi vượt `max_stale_seconds`, `low-activity` detection, alert frequency và holiday pattern. Các checker (`check_api`, `check_database`, `check_disk`) sử dụng lớp này để đảm bảo hành vi thống nhất.
-- Ngưỡng stale hiện dùng `seconds` thay vì `days` (`max_stale_seconds`).
+**Các file chính, lớp và phương thức quan trọng**
 
----
+- `src/main.py`
+  - Mục đích: entrypoint. Thiết lập logging, xử lý signal và chạy `asyncio.run(main())`.
+  - Hàm chính: `main()` (khởi chạy các tác vụ API/DB/Disk song song), `send_shutdown_alert()`, `signal_handler()`.
 
-## Yêu cầu & Cài đặt
+- `src/check/check_api.py`
+  - Lớp: `CheckAPI`
+    - `__init__`: khởi tạo logger, `TaskManager`, `PlatformManager`, cache symbols, `AlertTracker`.
+    - `_load_config()`: load `data_sources_config.json` và lọc các mục có `api.enable = true`.
+    - `check_data_api(api_name, api_config, symbol)`: vòng lặp async. Luồng xử lý:
+      - Reload config mỗi vòng
+      - Xây dựng URL (có thể format với `symbol`)
+      - Kiểm tra lịch bằng `TimeValidator.is_within_valid_schedule`
+      - Gọi API (requests), parse JSON (hỗ trợ wrapper và nested lists)
+      - Dùng `ConvertDatetimeUtil` để parse timestamp, `DataValidator` để kiểm tra tươi mới
+      - Dùng `AlertTracker` quyết định gửi alert / tránh spam
+      - Gọi `PlatformManager.send_alert(...)` để gửi tới các platform primary
+    - `run_api_tasks()`: quản lý task per-API hoặc per-symbol, dùng `SymbolResolverUtil.resolve_api_symbols` để lấy danh sách symbol.
 
-- **Python**: 3.8+
-- **Cài đặt tự động**: Script `run.ps1` (Windows) hoặc `run.sh` (Linux/macOS) sẽ tự động tạo virtual environment và cài đặt packages khi chạy lần đầu.
+- `src/check/check_database.py`
+  - Lớp: `CheckDatabase`
+    - Sử dụng `DatabaseManager` để tạo/get connector và `query()` lấy timestamp bản ghi mới nhất/cũ nhất
+    - Có logic alert/schedule tương tự `CheckAPI`.
+    - `run_database_tasks()` quản lý các task cho mỗi database hoặc mỗi symbol.
 
-### Windows PowerShell
-```powershell
-git clone https://github.com/adee0210/check-data-project
-cd check_data_project
-.\run.ps1 start  # Tự động tạo .venv và cài đặt packages
-```
+- `src/check/check_disk.py`
+  - Lớp: `CheckDisk`
+    - `_read_datetime_from_file(file_path, file_type, record_pointer, column_to_check)`: đọc datetime từ JSON/CSV/TXT hoặc dùng `mtime`
+    - `check_data_disk(...)`: vòng lặp kiểm tra file với logic tương tự (alert, schedule)
+    - `run_disk_tasks()` quản lý task cho từng file hoặc symbol
 
-### Linux / macOS
-```bash
-git clone https://github.com/adee0210/check-data-project
-cd check_data_project
-./run.sh start  # Tự động tạo .venv và cài đặt packages
-```
+- `src/logic_check/data_validator.py`
+  - Lớp: `DataValidator`
+    - `is_data_fresh(data_datetime, allow_delay)` trả về `(is_fresh, overdue_seconds)`. Có xử lý đặc biệt khi dữ liệu chỉ có ngày (date-only).
+    - `format_time_overdue(seconds, allow_delay_seconds)` format chuỗi thời gian dễ đọc.
 
----
+- `src/logic_check/time_validator.py`
+  - Lớp: `TimeValidator`
+    - `is_within_valid_schedule(valid_schedule, timezone_offset=7)` hỗ trợ nhiều định dạng lịch và so sánh theo giờ VN (UTC+7).
 
-## Cấu hình nhanh
+- `src/utils/alert_tracker_util.py`
+  - Lớp: `AlertTracker` quản lý trạng thái alert: `last_alert_times`, `first_stale_times`, `max_stale_exceeded`, `low_activity_symbols`, `empty_data_tracking`, v.v.
+  - Phương thức chính: `should_send_alert()`, `record_alert_sent()`, `track_empty_data()`, `reset_empty_data()`, `track_stale_data()`, `track_consecutive_stale_days()`, `reset_fresh_data()`.
 
-Cấu hình nằm trong `configs/data_sources_config.json`.
+- `src/utils/convert_datetime_util.py`
+  - Lớp: `ConvertDatetimeUtil` cung cấp parse cho ISO, `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DD`, timestamp, và `convert_utc_to_local()`.
 
-### Các key quan trọng (tất cả đơn vị **giây**)
-- `check.allow_delay` — độ trễ cho phép
-- `check.check_frequency` — tần suất kiểm tra
-- `check.alert_frequency` — tần suất gửi alert (tránh spam)
-- `check.max_stale_seconds` — giới hạn stale trước khi gửi final alert
-- `api.nested_list` — đặt `true` nếu API trả `data` dạng list-nested (ví dụ: `{"data": [[...]]}`)
+- `src/utils/load_config_util.py`
+  - Lớp: `LoadConfigUtil` quản lý đọc file JSON với caching dựa trên `mtime` và khả năng reload khi file thay đổi.
 
-**Lưu ý:** Thay đổi cấu hình sẽ được áp dụng tự động khi hệ thống reload (cơ chế reload động).
+- `src/utils/symbol_resolver_util.py`
+  - Lớp: `SymbolResolverUtil` giải quyết danh sách symbol theo config `symbols.auto_sync`:
+    - `auto_sync = true`: tự động lấy distinct symbols từ database có cùng `api_name` (qua `DatabaseManager`), cache vào `/cache/symbols_{api}.json` trong 24 giờ.
+    - `auto_sync = false`: dùng `symbols.values` từ cấu hình.
+    - `auto_sync = null` hoặc không có: API không cần symbol.
 
----
+- `src/utils/task_manager_util.py`
+  - Lớp: `TaskManager` helper tạo và chạy các asyncio task.
 
-## Chạy hệ thống
+- Platform utilities (`src/utils/platform_util/`)
+  - `base_platform.py`: `BasePlatformNotifier` interface + helper `build_base_message_data()`
+  - `discord_util.py`: `DiscordNotifier` (gửi qua webhook Discord, mong response 204 thành công)
+  - `telegram_util.py`: `TelegramNotifier` (gửi qua Telegram Bot API, parse Markdown)
+  - `platform_manager.py`: `PlatformManager` tạo notifier từ `configs/common_config.json` và expose `send_alert()` gửi tới tất cả platform primary.
 
-### Windows PowerShell
-```powershell
-.\run.ps1 start
-.\run.ps1 status
-.\run.ps1 restart
-.\run.ps1 stop
-```
+- Database connectors (`configs/database_config/`)
+  - `base_db.py`: `BaseDatabaseConnector` interface (connect, query, close, get_required_package)
+  - `mongo_config.py`: `MongoDBConnector` dùng `pymongo` (connect, query, get_distinct_symbols)
+  - `postgres_config.py`: `PostgreSQLConnector` dùng `psycopg2` (connect, query với MAX/MIN, get_distinct_symbols)
+  - `database_manager.py`: `DatabaseManager` (factory, cache connectors, merge credential từ `common_config.json`).
 
-### Linux / macOS
-```bash
-./run.sh start
-./run.sh status
-./run.sh restart
-./run.sh stop
-./run.sh logs    # Xem log
-./run.sh health  # Kiểm tra tình trạng hệ thống
-```
+**File cấu hình**
 
-### Chạy trực tiếp (Development)
-```bash
-source .venv/bin/activate
-python src/main.py
-```
+- `configs/common_config.json`
+  - Chứa: `PLATFORM_CONFIG` (discord, telegram), `POSTGRE_CONFIG` (host, port, database, user, password), `MONGO_CONFIG` (host, port, username, password, auth_source).
 
-### Xem logs
-```bash
-tail -f logs/main.log
-tail -f logs/api.log
-tail -f logs/database.log
-```
+- `configs/data_sources_config.json`
+  - Mỗi khóa ở cấp top-level là một nguồn dữ liệu (ví dụ `cmc`, `etf_candlestick`, `gold-data`, `vn100`).
+  - Mỗi nguồn có các phần cấu hình: `api`, `database`, `disk`, `symbols`, `check`, `schedule`.
+  - `api`: {`enable`, `url`, `record_pointer`, `column_to_check`, `nested_list`} — dùng cho `CheckAPI`.
+  - `database`: {`enable`, `type` (`mongodb`/`postgresql`), `database`, `collection_name`/`table`, `column_to_check`, `record_pointer`} — dùng cho `CheckDatabase`.
+  - `disk`: {`enable`, `file_type`, `file_path`, `column_to_check`} — dùng cho `CheckDisk`.
+  - `symbols`: {`auto_sync`: true|false|null, `values`: [...], `column`: tên cột dùng để query DISTINCT}.
+  - `check`: `timezone_offset`, `allow_delay`, `check_frequency`, `alert_frequency`, `max_stale_seconds`.
+  - `schedule`: `valid_days` (danh sách ngày trong tuần, 0=Thứ Hai), `time_ranges` (chuỗi hoặc danh sách `HH:MM-HH:MM`). Lịch luôn đánh giá theo giờ VN (UTC+7).
 
----
+  ** chi tiết `configs/data_sources_config.json`**
 
-## Quy tắc cảnh báo
+Nếu chỉ muốn cấu hình một loại nguồn (ví dụ chỉ API), chỉ cần thêm phần `api` cho khóa đó — không cần phải thêm `database` hoặc `disk`.
 
-- **Mức cảnh báo**: `ERROR` (đỏ), `WARNING` (cam), `INFO` (xanh lá).
-- **API**:
-  - `code != 200` hoặc JSON sai cấu trúc → `ERROR`
-  - `code == 200` & `data == []` → `WARNING` (Empty-data behavior)
-  - Sử dụng `api.nested_list: true` nếu API trả `data` dạng lồng list
-- **Database**:
-  - Nếu query trả `None` hoặc không có bản ghi mới → coi là `EMPTY_DATA`
+  - `api` (object) — dùng cho `CheckAPI`:
+    - `enable` (bool): bật/tắt kiểm tra API.
+    - `url` (string): endpoint để gọi. Có thể chứa `{symbol}` nếu task chạy theo symbol (vd: `...?symbol={symbol}`).
+    - `record_pointer` (int): chỉ mục bản ghi trong mảng trả về. `0` = bản ghi mới nhất, `-1` = bản ghi cũ nhất; cũng có thể là chỉ số khác nhưng nếu >= len(array) sẽ báo lỗi.
+    - `column_to_check` (string): tên trường chứa timestamp trong record (vd: `datetime`).
+    - `nested_list` (bool): `true` nếu response là nested list (ví dụ `[[{...}, ...]]`).
 
-### Empty-data behavior (quan trọng)
-Khi một nguồn (API / Database / Disk) trả về empty data (`data==[]` hoặc DB `None`), hệ thống sẽ gửi **một cảnh báo `WARNING` duy nhất**, sau đó chuyển sang **silent mode** ngay để tránh spam. Việc quản lý này được thực hiện bởi lớp `AlertTracker` (`src/utils/alert_tracker_util.py`).
-
-### Stale behavior
-- Nếu dữ liệu cũ hơn `max_stale_seconds`, hệ thống sẽ gửi một final alert, sau đó giảm spam (silent mode) cho nguồn đó. Task vẫn tiếp tục chạy để ghi nhận khi data trở lại.
-
-### Low-activity detection
-- Nếu một symbol liên tục stale trong nhiều ngày (threshold mặc định = 2 ngày), hệ thống có thể đánh dấu là `low-activity` và tạm ngưng gửi alert cho symbol đó. Hiện trạng low-activity chưa được lưu persistent across restarts.
-
-## Ví dụ cấu hình
-
--   `enable`: Bật/tắt kiểm tra API
--   `url`: API endpoint, có thể dùng `{symbol}` placeholder
--   `record_pointer`: `"first"` = record đầu tiên, `"last"` = record cuối cùng
--   `column_to_check`: Field chứa timestamp trong JSON response
-
-**database section:**
-
--   `enable`: Bật/tắt kiểm tra database
--   `type`: `"mongodb"` hoặc `"postgresql"`
--   `collection_name`: Tên collection (MongoDB)
--   `table`: Tên table (PostgreSQL)
--   `record_pointer`: `"first"` = MIN value, `"last"` = MAX value
--   `column_to_check`: Column chứa timestamp
-
-**disk section:** *(NEW)*
-
--   `enable`: Bật/tắt kiểm tra file trên disk
--   `file_type`: `"json"`, `"csv"`, `"txt"`, hoặc `"mtime"` (modification time)
--   `file_path`: Đường dẫn đầy đủ đến file (có thể dùng `{symbol}` placeholder)
--   `record_pointer`: `"first"` = record đầu tiên, `"last"` = record cuối cùng
--   `column_to_check`: Column/key chứa timestamp (bỏ qua nếu `file_type="mtime"`)
-
-**symbols section:**
-
--   `auto_sync`: `true` = tự động lấy từ DB, `false` = dùng manual list, `null` = không cần
--   `values`: Array symbols nếu `auto_sync=false`
--   `column`: Column chứa symbol
-
-**check section:**
-
--   `timezone_offset`: Offset timezone (0=UTC, 7=GMT+7)
--   `allow_delay`: Độ trễ tối đa cho phép (giây)
--   `check_frequency`: Tần suất check (giây)
--   `alert_frequency`: Tần suất alert (giây) - tránh spam
--   `max_stale_days`: Dừng task khi data cũ quá X ngày (smart holiday detection)
-
-**schedule section:**
-
--   `valid_days`: Array ngày (0=Mon, 6=Sun), `null` = all days
--   `time_ranges`: Array khung giờ HH:MM-HH:MM, `null` = 24/7
-
-### 3.3. Ví Dụ Cấu Hình
-
-#### 1. API + Database
->>>>>>> 6342fad4541a6f43092b52b6892311d378867ee1
-
-### 1. Disk JSON multi-symbol
-```json
-{
-  "stock-prices": {
-    "disk": {
-      "enable": true,
-      "file_type": "json",
-      "file_path": "/data/{symbol}_prices.json",
-      "record_pointer": "last",
-      "column_to_check": "updated_at"
-    },
-    "symbols": {
-      "auto_sync": false,
-      "values": ["AAPL", "GOOGL", "MSFT"],
-      "column": null
-    },
-    "check": {
-      "timezone_offset": 7,
-      "allow_delay": 60,
-      "check_frequency": 60,
-      "alert_frequency": 300,
-      "max_stale_seconds": 86400
-    },
-    "schedule": {
-      "valid_days": [0,1,2,3,4],
-      "time_ranges": ["09:00-11:30","13:00-15:00"]
-    }
-  }
-}
-```
-
-### 2. API với nested list
-```json
-{
-  "example-api": {
+  Ví dụ (API-only):
+  ```json
+  "gold-data": {
     "api": {
       "enable": true,
-      "url": "https://api.example.com/data?symbol={symbol}",
-      "record_pointer": "last",
-      "column_to_check": "timestamp",
-      "nested_list": true
-    },
-    "check": {
-      "allow_delay": 120,
-      "check_frequency": 30,
-      "alert_frequency": 300,
-      "max_stale_seconds": 300
+      "url": "http://.../gold-data/?day=0",
+      "record_pointer": 0,
+      "column_to_check": "datetime"
     }
   }
-}
-```
+  ```
 
----
+  - `database` (object) — dùng cho `CheckDatabase`:
+    - `enable` (bool): bật/tắt kiểm tra database.
+    - `type` (string): `mongodb` hoặc `postgresql`.
+    - `database` (string): tên database.
+    - `collection_name` (mongodb) / `table` (postgresql): tên collection/table để query.
+    - `column_to_check` (string): tên field cột chứa timestamp.
+    - `record_pointer` (int): `0` = mới nhất, `-1` = cũ nhất (Mongo dùng sort, Postgres dùng MAX/MIN).
 
-## Mở rộng
-
-### Thêm Database mới (MySQL)
-
-1. **Tạo connector** (`configs/database_config/mysql_config.py`):
-```python
-from .base_db import BaseDatabaseConnector
-
-class MySQLConnector(BaseDatabaseConnector):
-    def connect(self, config):
-        import mysql.connector
-        return mysql.connector.connect(**config)
-    
-    def query(self, config, symbol=None):
-        # Query logic here
-        pass
-    
-    def get_required_package(self):
-        return "mysql-connector-python"
-```
-
-2. **Đăng ký** (`configs/database_config/database_manager.py`):
-```python
-CONNECTOR_REGISTRY = {
-    "mongodb": MongoDBConnector,
-    "postgresql": PostgreSQLConnector,
-    "mysql": MySQLConnector  # Add this
-}
-```
-
-3. **Cấu hình** (`configs/common_config.json`):
-```json
-{
-  "MYSQL_CONFIG": {
-    "host": "localhost",
-    "port": 3306,
-    "database": "your_db",
-    "user": "root",
-    "password": "password"
-  }
-}
-```
-
-### Thêm Platform mới (Slack)
-
-1. **Tạo notifier** (`src/utils/platform_util/slack_util.py`):
-```python
-from .base_platform import BasePlatformNotifier
-
-class SlackNotifier(BasePlatformNotifier):
-    def validate_config(self):
-        if not self.config.get("webhook_url"):
-            raise ValueError("Thiếu 'webhook_url'")
-    
-    def get_platform_name(self):
-        return "Slack"
-    
-    def send_alert(self, api_name, symbol, overdue_seconds, allow_delay, check_frequency, alert_frequency, alert_level="warning", error_message="Không có dữ liệu mới", error_type=None):
-        # Send logic here
-        pass
-```
-
-2. **Đăng ký** (`src/utils/platform_util/platform_manager.py`):
-```python
-NOTIFIER_REGISTRY = {
-    "discord": DiscordNotifier,
-    "telegram": TelegramNotifier,
-    "slack": SlackNotifier  # Add this
-}
-```
-
-3. **Cấu hình** (`configs/common_config.json`):
-```json
-{
-  "PLATFORM_CONFIG": {
-    "slack": {
-      "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
-      "is_primary": true
+  Ví dụ (DB-only):
+  ```json
+  "vn100": {
+    "database": {
+      "enable": true,
+      "type": "postgresql",
+      "database": "dl_ckvn",
+      "table": "vn100",
+      "column_to_check": "datetime",
+      "record_pointer": 0
     }
   }
-}
-```
+  ```
 
----
+  - `disk` (object) — dùng cho `CheckDisk`:
+    - `enable` (bool): bật/tắt kiểm tra file.
+    - `file_type` (string): `json`, `csv`, `txt`, hoặc `mtime` (dùng last-modified time).
+    - `file_path` (string): đường dẫn file; có thể chứa `{symbol}` nếu file theo symbol.
+    - `record_pointer` (int): 0 = mới nhất, -1 = cũ nhất (đối với json/csv/txt đọc nội dung).
+    - `column_to_check` (string): tên cột trường chứa datetime (với json/csv).
 
-## Troubleshooting
+  Ví dụ (disk-only):
+  ```json
+  "tygia": {
+    "disk": {
+      "enable": true,
+      "file_type": "csv",
+      "file_path": "/path/to/tygia.csv",
+      "record_pointer": 0,
+      "column_to_check": "day"
+    }
+  }
+  ```
 
-### Lỗi Connection
-- **Nguyên nhân**: Database không chạy hoặc sai config
-- **Giải pháp**: Check `systemctl status mongodb` hoặc `psql -h localhost`
+  - `symbols` (object) — điều khiển danh sách symbol cho nguồn cần symbol:
+    - `auto_sync`: `true` → tự động lấy distinct symbols từ database có cùng tên (cần `symbols.column` và `database` config); `false` → dùng `values` thủ công; `null` → không cần symbol (nguồn 1 task duy nhất).
+    - `values`: danh sách symbol thủ công (nếu `auto_sync=false`).
+    - `column`: tên cột/field trong DB để lấy `DISTINCT` (bắt buộc khi `auto_sync=true`).
 
-### Alert không gửi
-- **Kiểm tra**: Logs (`tail -f logs/main.log`), test webhook với curl
-- **Nguyên nhân**: `alert_frequency` quá thấp, ngoài `schedule`
+  Ví dụ (auto sync từ DB):
+  ```json
+  "cmc": {
+    "symbols": { "auto_sync": true, "column": "symbol" },
+    "database": { "enable": true, "type": "mongodb", "database": "cmc_db", "collection_name": "cmc" }
+  }
+  ```
 
-### Data cũ nhưng không alert
-- **Kiểm tra**: `allow_delay`, `max_stale_seconds`, timezone
-- **Nguyên nhân**: Config sai hoặc holiday detection
+  - `check` (object) — tham số kiểm tra / ngưỡng (tất cả theo đơn vị giây, trừ khi ghi rõ khác):
+    - `timezone_offset` (int): múi giờ của dữ liệu (số giờ lệch so với UTC). Mặc định `7` (UTC+7). Hệ thống sẽ chuyển timestamp của nguồn về giờ VN trước khi so sánh nếu khác 7.
+    - `allow_delay` (int, seconds): khoảng thời gian cho phép để dữ liệu được xem là "mới" (ví dụ 60 = 60s). Nếu dữ liệu cũ hơn `allow_delay` => stale.
+    - `check_frequency` (int, seconds): tần suất checker sẽ chạy/kiểm tra (ví dụ 10 = mỗi 10s).
+    - `alert_frequency` (int, seconds): tối thiểu giữa hai lần gửi alert (để tránh spam).
+    - `max_stale_seconds` (int hoặc null): nếu tổng stale vượt quá giá trị này → gửi 1 alert cuối cùng rồi chuyển sang silent/log-only.
+    - `holiday_grace_period` (int, seconds, optional): ngưỡng phụ cho phát hiện nghi ngờ ngày lễ (mặc định 7200s = 2 giờ) — dùng nội bộ trong logic holiday detection.
 
-### Performance issues
-- **Giải pháp**: Tăng `check_frequency`, tạo index database, giảm số tasks
+  Ví dụ `check`:
+  ```json
+  "check": { "timezone_offset": 7, "allow_delay": 60, "check_frequency": 10, "alert_frequency": 60, "max_stale_seconds": 604800 }
+  ```
 
----
+  - `schedule` (object or list) — lịch cho phép kiểm tra (theo giờ VN UTC+7):
+    - `valid_days`: danh sách số nguyên 0..6 (0 = Thứ Hai, 6 = Chủ Nhật). `null` hoặc không set = mọi ngày.
+    - `time_ranges`: `null` = 24/7, hoặc chuỗi `"HH:MM-HH:MM"` hoặc danh sách các chuỗi (ví dụ `["09:00-11:30","13:00-14:30"]`). Nếu `time_ranges` là list, chỉ cần 1 trong các khoảng hợp lệ.
 
-## FAQ
+  Ví dụ (chỉ chạy giờ giao dịch):
+  ```json
+  "schedule": { "valid_days": [0,1,2,3,4], "time_ranges": ["09:00-11:30", "13:00-14:30"] }
+  ```
 
-**Q: Có thể monitor nhiều nguồn trong 1 config?**  
-A: Có! Set `enable: true` cho api, database, disk cùng lúc.
+  Ghi chú quan trọng:
+  - Nếu một nguồn chỉ cần check API (ví dụ `gold-data`), chỉ cần cung cấp phần `api` cho khóa đó; phần `database` và `disk` có thể để không cần ghi vào config.
+  - `symbols.auto_sync=true` yêu cầu `symbols.column` và phần `database` phải cấu hình đúng (collection/table và database). Nếu không có, resolver sẽ trả `[]` và task sẽ bị bỏ qua.
+  - `record_pointer` Bản ghi nằm ở vị trí nào trong mảng trả về từ data API: `0` thường trỏ tới bản ghi mới nhất nếu API trả mảng theo thứ tự mới->cũ; `-1` dùng khi cần lấy bản ghi cũ nhất.
+  - `nested_list=true` dùng khi API trả dữ liệu dạng nested list (ví dụ `[[{...},...]]`) hoặc wrapper có `data: [[...]]`.
 
-**Q: Schedule hoạt động thế nào?**  
-A: `valid_days` (0=Mon, 6=Sun), `time_ranges` (HH:MM-HH:MM). `null` = always on.
+  Ví dụ tổng hợp (api + db + symbols auto-sync):
+  ```json
+  "cmc": {
+    "api": { "enable": true, "url": "http://.../cmc/?symbol={symbol}&day=0", "record_pointer": 0, "column_to_check": "datetime" },
+    "database": { "enable": true, "type": "mongodb", "database": "cmc_db", "collection_name": "cmc", "column_to_check": "datetime" },
+    "symbols": { "auto_sync": true, "column": "symbol" },
+    "check": { "timezone_offset": 0, "allow_delay": 1800, "check_frequency": 60, "alert_frequency": 60 }
+  }
+  ```
+**Luồng hoạt động**
 
-**Q: alert_frequency khác check_frequency thế nào?**  
-A: `check_frequency`: Tần suất CHECK data. `alert_frequency`: Tần suất GỬI alert (tránh spam).
+- `src/main.py` khởi song song `CheckAPI`, `CheckDatabase`, `CheckDisk`.
+- Mỗi checker load config động từ `data_sources_config.json` (qua `LoadConfigUtil`) và tạo/cancel tasks theo config.
+- `SymbolResolverUtil` giải quyết symbol (auto-sync từ DB hoặc dùng giá trị thủ công).
+- `DatabaseManager` quản lý kết nối DB, delegating tới `MongoDBConnector` hoặc `PostgreSQLConnector` để query timestamp.
+- `AlertTracker` kiểm soát tần suất gửi alert, silent mode, low-activity detection.
+- `PlatformManager` gửi thông báo tới các platform được đánh dấu `is_primary` trong `common_config.json`.
 
-**Q: Có thể dùng placeholder {symbol} ở đâu?**  
-A: `api.url`, `disk.file_path`.
+**Hướng dẫn chạy**
 
----
+Yêu cầu trước khi chạy:
+- Python 3.8+ (workspace mẫu dùng Python 3.10)
+- Cài dependencies trong `requirements.txt`
 
-## License
-
-MIT License
-
-**Author:** adee0210  
-**Repository:** [https://github.com/adee0210/check-data-project](https://github.com/adee0210/check-data-project)
-
-## 6. MỞ RỘNG
-
-### 6.1. Thêm Database Mới (MySQL)
-
-#### Bước 1: Tạo Connector
-
-Tạo file `configs/database_config/mysql_config.py`:
-
-```python
-"""MySQL Connector"""from typing import Any, Dict, Optionalfrom datetime import datetimefrom .base_db import BaseDatabaseConnectorclass MySQLConnector(BaseDatabaseConnector):    """MySQL connector implementation"""        def __init__(self, logger):        super().__init__(logger)        def connect(self, config: Dict[str, Any]) -> Any:        """Kết nối MySQL"""        try:            import mysql.connector        except ImportError:            raise ImportError(                f"Thiếu thư viện MySQL. "                f"Cài đặt: pip install {self.get_required_package()}"            )                self.validate_config(config, ["host", "database", "username", "password"])                self.connection = mysql.connector.connect(            host=config["host"],            port=config.get("port", 3306),            database=config["database"],            user=config["username"],            password=config["password"]        )                self.logger.info(f"Kết nối MySQL thành công: {config['database']}")        return self.connection        def query(self, config: Dict[str, Any], symbol: Optional[str] = None) -> datetime:        """Query MySQL"""        if not self.is_connected():            raise ConnectionError("Chưa kết nối MySQL")                self.validate_config(config, ["table", "column_to_check"])                table = config["table"]        column = config["column_to_check"]        record_pointer = config.get("record_pointer", 0)        symbol_column = config.get("symbol_column")                agg_func = "MAX" if record_pointer == 0 else "MIN"        query = f"SELECT {agg_func}({column}) FROM {table}"        params = []                if symbol and symbol_column:            query += f" WHERE {symbol_column} = %s"            params.append(symbol)                cursor = self.connection.cursor()        cursor.execute(query, params)        result = cursor.fetchone()        cursor.close()                if result and result[0]:            return result[0]        raise ValueError("Không có kết quả")        def close(self) -> None:        """Đóng connection"""        if self.connection:            self.connection.close()            self.logger.info("Đã đóng MySQL")        self.connection = None        def get_required_package(self) -> str:        return "mysql-connector-python"
-```
-
-#### Bước 2: Register
-
-Edit `configs/database_config/database_manager.py`:
-
-```python
-# Thêm importfrom .mysql_config import MySQLConnectorclass DatabaseManager:    CONNECTOR_REGISTRY = {        "mongodb": MongoDBConnector,        "postgresql": PostgreSQLConnector,        "mysql": MySQLConnector,  # ← THÊM    }        def _get_connection_config(self, db_type, db_config):        # ... existing code ...                elif db_type == "mysql":  # ← THÊM            mysql_config = common_config["MYSQL_CONFIG"]            return {                "host": mysql_config["host"],                "port": mysql_config["port"],                "database": database_name or mysql_config["database"],                "username": mysql_config["user"],                "password": mysql_config["password"],            }
-```
-
-#### Bước 3: Config
-
-Edit `configs/common_config.json`:
-
-```json
-{  "MYSQL_CONFIG": {    "host": "localhost",    "port": 3306,    "database": "your_db",    "user": "root",    "password": "password"  }}
-```
-
-**XONG!** Sử dụng: `"type": "mysql"` trong config
-
-### 6.2. Thêm Platform Mới (Slack)
-
-#### Bước 1: Tạo Notifier
-
-Tạo file `src/utils/platform_util/slack_util.py`:
-
-```python
-"""Slack Notifier"""import requestsfrom typing import Dict, Any, Optionalfrom .base_platform import BasePlatformNotifierclass SlackNotifier(BasePlatformNotifier):    """Slack notifier implementation"""        def validate_config(self) -> None:        """Validate Slack config"""        if not self.config.get("webhook_url"):            raise ValueError("Thiếu 'webhook_url'")        def get_platform_name(self) -> str:        return "Slack"        def send_alert(        self,        api_name: str,        symbol: Optional[str],        overdue_seconds: int,        allow_delay: int,        check_frequency: int,        alert_frequency: int,        alert_level: str = "warning",        error_message: str = "Không có dữ liệu mới",        error_type: Optional[str] = None,    ) -> bool:        """Gửi alert đến Slack"""        if not self.is_enabled():            return False                webhook_url = self.config["webhook_url"]        data = self.build_base_message_data(            api_name, symbol, overdue_seconds, allow_delay,            check_frequency, alert_frequency, alert_level,            error_message, error_type        )                message = self._format_slack_message(data)                try:            response = requests.post(webhook_url, json=message, timeout=10)            if response.status_code == 200:                self.logger.info("Gửi Slack thành công")                return True            return False        except Exception as e:            self.logger.error(f"Lỗi gửi Slack: {e}")            return False        def _format_slack_message(self, data: Dict[str, Any]) -> Dict[str, Any]:        """Format Slack blocks"""        fields = [            {"type": "mrkdwn", "text": f"*Thời gian:*n{data['current_time']}"},            {"type": "mrkdwn", "text": f"*Dữ liệu cũ:*n{data['total_time_formatted']}"},        ]                if data['symbol']:            fields.insert(1, {"type": "mrkdwn", "text": f"*Symbol:*n{data['symbol']}"})                return {            "blocks": [                {                    "type": "header",                    "text": {                        "type": "plain_text",                        "text": f"{data['emoji']} {data['api_name']} - {data['alert_type']}"                    }                },                {"type": "section", "fields": fields}            ]        }
-```
-
-#### Bước 2: Register
-
-Edit `src/utils/platform_util/platform_manager.py`:
-
-```python
-# Thêm importfrom .slack_util import SlackNotifierclass PlatformManager:    NOTIFIER_REGISTRY = {        "discord": DiscordNotifier,        "telegram": TelegramNotifier,        "slack": SlackNotifier,  # ← THÊM    }
-```
-
-#### Bước 3: Config
-
-Edit `configs/common_config.json`:
-
-```json
-{  "PLATFORM_CONFIG": {    "slack": {      "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK",      "is_primary": true    }  }}
-```
-
-**XONG!** Slack sẽ nhận alerts tự động
-
----
-
-## 7. TROUBLESHOOTING
-
-### Lỗi Connection
-
-```
-ConnectionError: Không thể kết nối database
-```
-
-**Fix:**
-
--    Check database đang chạy: `systemctl status mongodb`
--    Check credentials trong `common_config.json`
--    Check firewall: `sudo ufw allow 27017`
-
-### Lỗi Import
-
-```
-ImportError: Thiếu thư viện
-```
-
-**Fix:**
-
+Khởi chạy nhanh (Linux):
 ```bash
-pip install -r requirements.txt
+# từ thư mục dự án
+./run.sh start    # tạo .venv, cài dependencies và chạy nền
+./run.sh status   # kiểm tra trạng thái và xem log
+./run.sh stop     # dừng ứng dụng
 ```
 
-### Discord Webhook Failed
+Windows: sử dụng `run.ps1` với PowerShell.
 
-```
-Lỗi gửi đến Discord: 404
-```
+Log PID:
+- Log nằm trong thư mục `logs/` (cấu hình ở `configs/logging_config.py`): `main.log`, `api.log`, `database.log`, `disk.log`.
+- File PID tạo bởi `run.sh`: `check_data.pid`.
 
-**Fix:**
+**Trước khi chạy — checklist cấu hình**
+- Cập nhật `configs/common_config.json` với thông tin platform (Discord webhook, Telegram bot token/chat id) và thông tin DB (`POSTGRE_CONFIG`, `MONGO_CONFIG`).
+- Cập nhật `configs/data_sources_config.json` để bật/tắt nguồn dữ liệu, thiết lập `url`, `database`, `collection_name`/`table`, `symbols`, và các tham số `check`/`schedule`.
 
--    Check webhook URL đúng format
--    Test webhook: `curl -X POST webhook_url -d '{"content":"test"}'`
+**Mở rộng hệ thống**
 
-### Data Cũ Spam Alerts
+- Thêm notifier mới: tạo subclass của `BasePlatformNotifier` trong `src/utils/platform_util/` và đăng ký vào `PlatformManager.NOTIFIER_REGISTRY`.
+- Thêm loại database mới: implement subclass của `BaseDatabaseConnector` trong `configs/database_config/` và đăng ký vào `DatabaseManager.CONNECTOR_REGISTRY`.
 
-```
-Nhận quá nhiều alerts cho data cũ
-```
+**Bảo mật & vận hành**
 
-**Fix:**Set `max_stale_days` trong config:
+- `LoadConfigUtil` có cơ chế cache và tự reload khi file thay đổi (dựa trên `mtime`).
 
-```json
-"check": {  "max_stale_days": 3}
-```
-
-### Performance Issues
-
-```
-CPU/RAM cao
-```
-
-**Fix:**
-
--    Tăng `check_frequency` (giảm tần suất check)
--    Tạo index trên database:
-    
-    ```sql
-    CREATE INDEX idx_datetime ON table(datetime);CREATE INDEX idx_symbol_datetime ON table(symbol, datetime);
-    ```
-    
--    Check số tasks: `ps aux | grep python`
-
-### Symbols Không Auto-sync
-
-```
-Không lấy được symbols từ database
-```
-
-**Fix:**
-
--    Check `auto_sync: true` và `column` đúng
--    Check quyền đọc database
--    Xóa cache: `rm -rf cache/*`
-
----
-
-## PERFORMANCE TIPS
-
-### Database Optimization
-
-1.  **Tạo indexes:**
-    
-    ```sql
-    -- PostgreSQLCREATE INDEX idx_datetime ON table(datetime);CREATE INDEX idx_symbol ON table(symbol);-- MongoDBdb.collection.createIndex({datetime: -1})db.collection.createIndex({symbol: 1, datetime: -1})
-    ```
-    
-2.  **Config optimization:**
-    
-    ```json
-    {  "check_frequency": 60,  "alert_frequency": 300}
-    ```
-    
-
-### Caching Strategy
-
--   **Symbols**: Cache 24h trong `cache/`
--   **Config**: Mtime-based reload
--   **Connections**: Pooling tự động
--   **Class-level**: Persist qua config reloads
-
-### Resource Usage
-
-Metric
-
-Value
-
-RAM/task
-
-~2-5MB
-
-CPU idle
-
-<1%
-
-CPU active
-
-5-10%
-
-Disk I/O
-
-Minimal (cache)
-
----
->>>>>>> 6342fad4541a6f43092b52b6892311d378867ee1
+**Các file quan trọng (tóm tắt)**
+- Cấu hình: [configs/common_config.json](configs/common_config.json), [configs/data_sources_config.json](configs/data_sources_config.json)
+- Entrypoint: [src/main.py](src/main.py)
+- Checkers: [src/check/check_api.py](src/check/check_api.py), [src/check/check_database.py](src/check/check_database.py), [src/check/check_disk.py](src/check/check_disk.py)
+- DB connectors: [configs/database_config/mongo_config.py](configs/database_config/mongo_config.py), [configs/database_config/postgres_config.py](configs/database_config/postgres_config.py)
+- Platform: [src/utils/platform_util/platform_manager.py](src/utils/platform_util/platform_manager.py), [src/utils/platform_util/discord_util.py](src/utils/platform_util/discord_util.py), [src/utils/platform_util/telegram_util.py](src/utils/platform_util/telegram_util.py)
+- Utils: [src/utils/load_config_util.py](src/utils/load_config_util.py), [src/utils/symbol_resolver_util.py](src/utils/symbol_resolver_util.py), [src/utils/convert_datetime_util.py](src/utils/convert_datetime_util.py), [src/utils/alert_tracker_util.py](src/utils/alert_tracker_util.py)

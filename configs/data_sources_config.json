@@ -93,7 +93,7 @@
             "timezone_offset": 0,
             "allow_delay": 1800,
             "check_frequency": 180,
-            "alert_frequency": 180,
+            "alert_frequency": 300,
             "max_stale_seconds": 3600
         },
         "schedule": {
