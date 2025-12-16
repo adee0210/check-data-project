@@ -2,21 +2,23 @@
 
 ---
 
-1) Tạo môi trường ảo và cài phụ thuộc:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-2) Chạy dịch vụ (Linux/macOS):
+1) Chạy trên Linux:
 
 ```bash
 ./run.sh
-# hoặc
-python src/main.py
 ```
+
+2) Chạy trên Windows:
+
+```powershell
+./run.ps1
+```
+
+> Cả hai script sẽ tự động tạo virtual environment và cài đặt requirements nếu chưa có. Không cần thao tác thủ công.
+
+> Nếu muốn chạy trực tiếp không qua script, bạn cần tự tạo venv, cài requirements và kích hoạt venv trước khi chạy `python src/main.py`.
+
+---
 
 3) Kiểm tra log: xem thư mục `logs/`.
 
