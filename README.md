@@ -5,11 +5,15 @@ clone github:
 
 ```bash
 git clone https://github.com/adee0210/check-data-project
+cd check-data-project
 ```
 
 1) Chạy trên Linux:
 
 ```bash
+
+# Cấp quyền thực thi cho thư mục nếu là Linux
+chmod +x run.sh
 ./run.sh
 ```
 
