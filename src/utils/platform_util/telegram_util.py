@@ -122,7 +122,7 @@ class TelegramNotifier(BasePlatformNotifier):
         """
         message_parts = [
             f"{data['emoji']} *{data['alert_type']}*\n",
-            f"*Nội dung:* {data['error_message']}, dữ liệu cũ cũ quá {data['total_time_formatted']}",
+            f"*Nội dung:* {data['error_message']}, dữ liệu cũ quá {data['total_time_formatted']}",
             f"*Thời gian:* {data['current_time']}",
         ]
 

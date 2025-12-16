@@ -112,8 +112,9 @@ class DiscordNotifier(BasePlatformNotifier):
         Returns:
             Discord embed dict
         """
+        # Build description với Nội dung + Dữ liệu cũ ở đầu
         description_parts = [
-            f"**Nội dung:** {data['error_message']}, Dữ liệu cũ quá {data['total_time_formatted']}",
+            f"**Nội dung:** {data['error_message']} - Dữ liệu cũ: {data['total_time_formatted']}",
             f"**Thời gian:** {data['current_time']}",
         ]
 
