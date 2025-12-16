@@ -1,6 +1,11 @@
 **Tổng quan dự án**
 
 ---
+clone github:
+
+```bash
+git clone https://github.com/adee0210/check-data-project
+```
 
 1) Chạy trên Linux:
 
@@ -14,9 +19,9 @@
 ./run.ps1
 ```
 
-> Cả hai script sẽ tự động tạo virtual environment và cài đặt requirements nếu chưa có. Không cần thao tác thủ công.
+> Cả hai script sẽ tự động tạo virtual environment và cài đặt requirements nếu chưa có
 
-> Nếu muốn chạy trực tiếp không qua script, bạn cần tự tạo venv, cài requirements và kích hoạt venv trước khi chạy `python src/main.py`.
+> Nếu muốn chạy trực tiếp không qua script,tự tạo venv, cài requirements và kích hoạt venv trước khi chạy `python src/main.py`.
 
 ---
 
