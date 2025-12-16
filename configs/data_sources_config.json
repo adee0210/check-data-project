@@ -340,5 +340,40 @@
                 "14:46-14:47"
             ]
         }
+    },
+    "vn100f1m": {
+        "api": {
+            "enable": true,
+            "url": "http://192.168.110.31/ckvn/vn100f1m?days=0",
+            "record_pointer": -1,
+            "column_to_check": "Date",
+            "nested_list": true
+        },
+        "symbols": {
+            "auto_sync": null,
+            "values": null,
+            "column": null
+        },
+        "check": {
+            "timezone_offset": 7,
+            "allow_delay": 180,
+            "check_frequency": 10,
+            "alert_frequency": 300,
+            "max_stale_seconds": 604800
+        },
+        "schedule": {
+            "valid_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "time_ranges": [
+                "09:00-11:30",
+                "13:00-14:30",
+                "14:46-14:47"
+            ]
+        }
     }
 }
