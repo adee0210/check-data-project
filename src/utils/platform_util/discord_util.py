@@ -112,8 +112,10 @@ class DiscordNotifier(BasePlatformNotifier):
         Returns:
             Discord embed dict
         """
-        # Build description với source_details sau Thời gian
-        description_parts = [f"**Thời gian:** {data['current_time']}"]
+        description_parts = [
+            f"**Nội dung:** {data['error_message']}, Dữ liệu cũ quá {data['total_time_formatted']}",
+            f"**Thời gian:** {data['current_time']}",
+        ]
 
         # Thêm source details ngay sau thời gian nếu có
         if data.get("source_details"):
@@ -126,8 +128,6 @@ class DiscordNotifier(BasePlatformNotifier):
         # Thêm các field còn lại
         description_parts.extend(
             [
-                f"**Nội dung:** {data['error_message']}",
-                f"**Dữ liệu cũ:** {data['total_time_formatted']}",
                 f"**Ngưỡng cho phép:** {data['allow_delay_formatted']}",
                 f"**Tần suất kiểm tra:** {data['check_frequency']} giây",
                 f"**Thời gian gửi message tiếp theo (nếu còn lỗi):** {data['next_time']}",

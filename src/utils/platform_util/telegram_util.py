@@ -120,9 +120,9 @@ class TelegramNotifier(BasePlatformNotifier):
         Returns:
             Formatted Markdown string
         """
-        # Build message với source_details sau Thời gian
         message_parts = [
             f"{data['emoji']} *{data['alert_type']}*\n",
+            f"*Nội dung:* {data['error_message']}, dữ liệu cũ cũ quá {data['total_time_formatted']}",
             f"*Thời gian:* {data['current_time']}",
         ]
 
@@ -137,8 +137,6 @@ class TelegramNotifier(BasePlatformNotifier):
         # Thêm các field còn lại
         message_parts.extend(
             [
-                f"*Nội dung:* {data['error_message']}",
-                f"*Dữ liệu cũ:* {data['total_time_formatted']}",
                 f"*Ngưỡng cho phép:* {data['allow_delay_formatted']}",
                 f"*Tần suất kiểm tra:* {data['check_frequency']} giây",
                 f"*Thời gian gửi message tiếp theo (nếu còn lỗi):* {data['next_time']}",
