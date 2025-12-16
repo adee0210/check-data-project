@@ -82,7 +82,7 @@ chmod +x run.sh
 - `record_pointer`: Vị trí bản ghi trong mảng trả về từ API/DB. `0` thường là bản ghi mới nhất, `-1` là bản ghi cũ nhất.
 - `nested_list=true`: Dùng khi API trả về nested list (ví dụ `[[{...},...]]` hoặc `data: [[...]]`).
 
-Ví dụ tổng hợp (api + db + symbols auto-sync):
+Ví dụ(api + db + disk + symbols auto-sync):
 
 ```json
 {
@@ -100,6 +100,13 @@ Ví dụ tổng hợp (api + db + symbols auto-sync):
       "collection_name": "cmc",
       "column_to_check": "datetime"
     },
+     "disk": {
+            "enable": true,
+            "file_type": "csv",
+            "file_path": "/home/duc_le/nas/data/...",
+            "record_pointer": 0,
+            "column_to_check": "day"
+     }
     "symbols": {
       "auto_sync": true,
       "column": "symbol"
@@ -109,7 +116,19 @@ Ví dụ tổng hợp (api + db + symbols auto-sync):
       "allow_delay": 1800,
       "check_frequency": 60,
       "alert_frequency": 60
-    }
+    },
+     "schedule": {
+            "valid_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "time_ranges": [
+                "09:00-09:45"
+            ]
+        }
   }
 }
 ```
