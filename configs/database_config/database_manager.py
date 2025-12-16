@@ -67,8 +67,57 @@ class DatabaseManager:
             else db_config.get("database")
         )
 
+        # Extract user_connect từ config (mặc định là duc_le_connect nếu không có)
+        user_connect = (
+            db_cfg.get("user_connect", "duc_le_connect")
+            if isinstance(db_cfg, dict)
+            else "duc_le_connect"
+        )
+
+        self.logger.info(
+            f"Sử dụng connection profile: '{user_connect}' cho database type: '{db_type}'"
+        )
+
+        # Get connection profile từ DATABASE_CONNECTIONS
+        database_connections = common_config.get("DATABASE_CONNECTIONS", {})
+
+        # Fallback: Nếu không có DATABASE_CONNECTIONS, thử dùng cấu trúc cũ
+        if not database_connections:
+            self.logger.warning(
+                "Không tìm thấy DATABASE_CONNECTIONS, sử dụng cấu trúc cũ (MONGO_CONFIG/POSTGRE_CONFIG)"
+            )
+            database_connections = {
+                "default": {
+                    "POSTGRE_CONFIG": common_config.get("POSTGRE_CONFIG", {}),
+                    "MONGO_CONFIG": common_config.get("MONGO_CONFIG", {}),
+                }
+            }
+            user_connect = "default"
+
+        # Lấy connection profile
+        connection_profile = database_connections.get(user_connect)
+        if not connection_profile:
+            available_profiles = ", ".join(database_connections.keys())
+            self.logger.error(
+                f"Không tìm thấy connection profile '{user_connect}'. "
+                f"Các profile có sẵn: {available_profiles}"
+            )
+            raise ValueError(
+                f"Không tìm thấy connection profile '{user_connect}'. "
+                f"Các profile có sẵn: {available_profiles}"
+            )
+
+        self.logger.debug(
+            f"Đã tìm thấy connection profile '{user_connect}' với các config: {list(connection_profile.keys())}"
+        )
+
         if db_type == "postgresql":
-            postgres_config = common_config["POSTGRE_CONFIG"]
+            postgres_config = connection_profile.get("POSTGRE_CONFIG", {})
+            if not postgres_config:
+                raise ValueError(
+                    f"Không tìm thấy POSTGRE_CONFIG trong profile '{user_connect}'"
+                )
+
             return {
                 "host": postgres_config["host"],
                 "port": postgres_config["port"],
@@ -78,7 +127,12 @@ class DatabaseManager:
             }
 
         elif db_type == "mongodb":
-            mongo_config = common_config["MONGO_CONFIG"]
+            mongo_config = connection_profile.get("MONGO_CONFIG", {})
+            if not mongo_config:
+                raise ValueError(
+                    f"Không tìm thấy MONGO_CONFIG trong profile '{user_connect}'"
+                )
+
             return {
                 "host": mongo_config["host"],
                 "port": mongo_config["port"],
@@ -90,7 +144,7 @@ class DatabaseManager:
 
         # Thêm các database khác ở đây theo format chung
         # elif db_type == "mysql":
-        #     mysql_config = common_config["MYSQL_CONFIG"]
+        #     mysql_config = connection_profile["MYSQL_CONFIG"]
         #     return {...}
 
         else:
@@ -166,7 +220,20 @@ class DatabaseManager:
             # Cache connector
             self.connectors[db_name] = connector
 
-            self.logger.info(f"Kết nối {db_type} thành công: {db_name}")
+            # Extract user_connect để log
+            db_cfg = db_config.get("database", {})
+            user_connect = (
+                db_cfg.get("user_connect", "duc_le_connect")
+                if isinstance(db_cfg, dict)
+                else "duc_le_connect"
+            )
+            db_host = connection_config.get("host", "N/A")
+            db_database = connection_config.get("database", "N/A")
+
+            self.logger.info(
+                f"Kết nối {db_type} thành công: {db_name} "
+                f"| Profile: '{user_connect}' | Host: {db_host} | Database: {db_database}"
+            )
             return connector
 
         except ImportError as e:

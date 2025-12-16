@@ -32,6 +32,73 @@ chmod +x run.sh
 3) Kiểm tra log: xem thư mục `logs/`.
 
 
+**CẤU HÌNH DATABASE CONNECTIONS (`configs/common_config.json`)**
+
+Hệ thống hỗ trợ nhiều connection profiles cho database, cho phép kết nối đến các database với credentials khác nhau.
+
+Cấu trúc:
+
+```json
+{
+  "DATABASE_CONNECTIONS": {
+    "duc_le_connect": {
+      "POSTGRE_CONFIG": {
+        "host": "192.168.110.31",
+        "port": 5434,
+        "database": "dl_ckvn",
+        "user": "le_duc",
+        "password": "ducle1610"
+      },
+      "MONGO_CONFIG": {
+        "host": "192.168.110.164",
+        "port": 27017,
+        "username": "duc_le",
+        "password": "ducle1908",
+        "auth_source": "admin"
+      }
+    },
+    "duc_le_2_connect": {
+      "POSTGRE_CONFIG": {...},
+      "MONGO_CONFIG": {...}
+    }
+  }
+}
+```
+
+**Giải thích:**
+- Mỗi connection profile (ví dụ `duc_le_connect`, `duc_le_2_connect`) có thể chứa cả `POSTGRE_CONFIG` và `MONGO_CONFIG`.
+- Trong `data_sources_config.json`, mỗi nguồn dữ liệu sẽ chỉ định `user_connect` để chọn profile phù hợp.
+- Nếu không chỉ định `user_connect`, hệ thống sẽ dùng `duc_le_connect` làm mặc định.
+- Logic sẽ tự động chọn config tương ứng (MONGO hoặc POSTGRE) dựa trên `type` của database.
+
+**Ví dụ sử dụng trong data_sources_config.json:**
+
+```json
+{
+  "gold-data": {
+    "database": {
+      "enable": true,
+      "type": "mongodb",
+      "database": "gold_db",
+      "collection_name": "gold_minute_data",
+      "user_connect": "duc_le_connect"
+    }
+  },
+  "vn100": {
+    "database": {
+      "enable": true,
+      "type": "postgresql",
+      "database": "dl_ckvn",
+      "table": "vn100",
+      "user_connect": "duc_le_2_connect"
+    }
+  }
+}
+```
+
+---
+
+
 **CẤU HÌNH CHI TIẾT (`configs/data_sources_config.json`)**
 
 
@@ -48,6 +115,8 @@ chmod +x run.sh
   - `database` (string): Tên database/schema
   - `collection_name` or `table` (string): Tên collection/table
   - `column_to_check` (string): Trường thời gian để kiểm tra
+  - `record_pointer` (int, tùy chọn): 0 = newest, -1 = oldest
+  - `user_connect` (string, tùy chọn): Tên connection profile trong `common_config.json` (mặc định: `duc_le_connect`)
   - `record_pointer` (int, tùy chọn): 0 = newest, -1 = oldest
 
 - **disk** (object):
@@ -98,7 +167,8 @@ Ví dụ(api + db + disk + symbols auto-sync):
       "type": "mongodb",
       "database": "cmc_db",
       "collection_name": "cmc",
-      "column_to_check": "datetime"
+      "column_to_check": "datetime",
+      "user_connect": "duc_le_connect"
     },
      "disk": {
             "enable": true,

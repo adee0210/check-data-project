@@ -12,7 +12,8 @@
             "database": "gold_db",
             "collection_name": "gold_minute_data",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": null,
@@ -50,7 +51,8 @@
             "database": "cmc_db",
             "collection_name": "cmc",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": true,
@@ -82,7 +84,8 @@
             "database": "etf_candlestick_db",
             "collection_name": "etf_candlestick",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": true,
@@ -124,7 +127,8 @@
             "database": "btc_dominance",
             "collection_name": "raw_btc_dominance",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": null,
@@ -150,7 +154,8 @@
             "database": "ckvn_raw",
             "collection_name": "vn30f1m_trade_realtime_ssi",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": null,
@@ -186,7 +191,8 @@
             "database": "ckvn_raw",
             "collection_name": "vn30f1m_trade_realtime_vps",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": null,
@@ -228,7 +234,8 @@
             "database": "dl_ckvn",
             "table": "vn100",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "symbols": {
             "auto_sync": null,
@@ -264,7 +271,8 @@
             "database": "dl_ckvn",
             "table": "selling_rate",
             "record_pointer": 0,
-            "column_to_check": "datetime"
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
         },
         "disk": {
             "enable": true,

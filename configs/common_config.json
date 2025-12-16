@@ -10,18 +10,22 @@
             "is_primary": true
         }
     },
-    "POSTGRE_CONFIG": {
-        "host": "192.168.110.31",
-        "port": 5434,
-        "database": "dl_ckvn",
-        "user": "le_duc",
-        "password": "ducle1610"
-    },
-    "MONGO_CONFIG": {
-        "host": "192.168.110.164",
-        "port": 27017,
-        "username": "duc_le",
-        "password": "ducle1908",
-        "auth_source": "admin"
+    "DATABASE_CONNECTIONS": {
+        "duc_le_connect": {
+            "POSTGRE_CONFIG": {
+                "host": "192.168.110.31",
+                "port": 5434,
+                "database": "dl_ckvn",
+                "user": "le_duc",
+                "password": "ducle1610"
+            },
+            "MONGO_CONFIG": {
+                "host": "192.168.110.164",
+                "port": 27017,
+                "username": "duc_le",
+                "password": "ducle1908",
+                "auth_source": "admin"
+            }
+        }
     }
 }
