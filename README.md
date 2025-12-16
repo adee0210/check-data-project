@@ -2,8 +2,6 @@
 
 ---
 
-**QUICK START**
-
 1) Tạo môi trường ảo và cài phụ thuộc:
 
 ```bash
@@ -22,19 +20,12 @@ python src/main.py
 
 3) Kiểm tra log: xem thư mục `logs/`.
 
-**MỤC LỤC README (tóm tắt)**
-- Quick Start (đã có)
-- Cấu hình (giải thích `configs/data_sources_config.json`)
-- Modules & Luồng xử lý
-- Sơ đồ kiến trúc (Mermaid)
-- Vận hành & Troubleshooting
-- Các bước tiếp theo (tuỳ chọn)
 
 **CẤU HÌNH CHI TIẾT (`configs/data_sources_config.json`)**
 
-Tổng quan: mỗi khóa top-level là một nguồn dữ liệu (ví dụ `cmc`, `vn100`). Mỗi nguồn có thể chứa một hoặc nhiều phần: `api`, `database`, `disk`, `symbols`, `check`, `schedule`.
+mỗi KEY top-level là một nguồn dữ liệu (ví dụ `cmc`, `vn100`). Mỗi nguồn có thể chứa một hoặc nhiều phần: `api`, `database`, `disk`, `symbols`, `check`, `schedule`.
 
-Các trường phổ biến:
+Các trường:
 
 - `enabled` (boolean): bật/tắt kiểm tra cho nguồn này.
 - `type` (string, tuỳ chọn): `api` | `db` | `disk` — loại nguồn chính.
@@ -99,12 +90,12 @@ Ví dụ rút gọn (API + symbols inline):
 }
 ```
 
-Ghi chú vận hành:
+vận hành:
 - Nếu chỉ cần API → chỉ cấu hình `api`.
 - Nếu `symbols.auto_sync=true` cần cung cấp `symbols.column` và `database` để resolver lấy distinct.
 - `record_pointer` phụ thuộc định dạng trả về của API / file.
 
-**MODULES & LUỒNG XỬ LÝ (tóm tắt)**
+**MODULES & LUỒNG XỬ LÝ**
 
 - `src/main.py` — đọc config, khởi logger, tạo asyncio tasks cho từng checker, xử lý signal (shutdown/cleanup).
 - `src/check/check_api.py` — `CheckAPI`:
@@ -127,41 +118,11 @@ Ghi chú vận hành:
   - `AlertTracker`: theo dõi last alert, avoid spam;
   - `PlatformManager`: tạo và gửi tới notifier.
 
-**SƠ ĐỒ KIẾN TRÚC (Mermaid)**
-
-```mermaid
-flowchart TD
-  Main[main.py] --> Checkers{Checkers}
-  Checkers --> API[CheckAPI]
-  Checkers --> DB[CheckDatabase]
-  Checkers --> Disk[CheckDisk]
-  API --> Symbols[SymbolResolver]
-  API --> Conv[ConvertDatetimeUtil]
-  API --> TV[TimeValidator]
-  API --> AT[AlertTracker]
-  AT --> PM[PlatformManager]
-  PM --> Discord[DiscordNotifier]
-  PM --> Telegram[TelegramNotifier]
-  DB --> DBM[DatabaseManager]
-  DBM --> Mongo[MongoConnector]
-  DBM --> Postgres[PostgresConnector]
-  Disk --> FS[FileSystem]
-```
-
 **VẬN HÀNH & TROUBLESHOOTING**
 
 - Logs: kiểm tra `logs/` để xem chi tiết lỗi.
 - Nếu không nhận được alert: kiểm tra `configs/common_config.json` (webhook/token/chat_id) và trạng thái `is_primary` trong cấu hình platform.
-- Để test nhanh: giảm `check.allow_delay` hoặc `check.check_frequency` cho nguồn cần kiểm thử.
-- Bảo mật: không lưu credential công khai trong repo; dùng biến môi trường hoặc secrets manager.
-
-**TIẾP THEO (tuỳ chọn thực hiện tiếp)**
-
-- Tạo file `configs/data_sources_config.example.json` (redacted) — tiện dùng để cấu hình môi trường.
-- Thêm unit tests cho `TimeValidator` và `DataValidator`.
-- Hoàn thiện ví dụ cụ thể cho từng nguồn hiện có trong repo.
-
-Nếu cần thực hiện phần nào trong danh sách trên, gửi chỉ định hành động mong muốn.
+- Để test nhanh: giảm `check.allow_delay` hoặc `check.check_frequency` cho nguồn cần check.
 
 **Sơ đồ kiến trúc**
 
@@ -186,7 +147,7 @@ Lớp platform (gửi thông báo):
 Lớp database:
 - `configs/database_config/*`: `BaseDatabaseConnector`, `MongoDBConnector`, `PostgreSQLConnector` và `DatabaseManager` (factory + cache connector).
 
-**Các file chính, lớp và phương thức quan trọng**
+**Các file chính, lớp và phương thức**
 
 - `src/main.py`
   - Mục đích: entrypoint. Thiết lập logging, xử lý signal và chạy `asyncio.run(main())`.
