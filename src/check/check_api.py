@@ -397,14 +397,21 @@ class CheckAPI:
 
             # Check nếu vượt max_stale_seconds
             total_stale_seconds = overdue_seconds + allow_delay
-            exceeds_max_stale, is_first_time = self.tracker.track_stale_data(
-                display_name, max_stale_seconds, total_stale_seconds
+            data_timestamp = dt_record_pointer_data_with_column_to_check.isoformat()
+            exceeds_max_stale, is_first_time, has_new_data = (
+                self.tracker.track_stale_data(
+                    display_name, max_stale_seconds, total_stale_seconds, data_timestamp
+                )
             )
 
             # ===== CASE 2A: Vượt max_stale_seconds =====
             if exceeds_max_stale:
-                # Gửi alert 1 lần duy nhất
-                if is_first_time:
+                # Chỉ gửi alert nếu:
+                # 1) Lần đầu vượt max_stale (is_first_time=True), HOẶC
+                # 2) Có data mới (has_new_data=True) nhưng vẫn quá hạn
+                should_alert = is_first_time or (has_new_data and not is_first_time)
+
+                if should_alert:
                     hours = int(total_stale_seconds // 3600)
                     minutes = int((total_stale_seconds % 3600) // 60)
                     seconds = int(total_stale_seconds % 60)
@@ -413,11 +420,19 @@ class CheckAPI:
                     max_minutes = int((max_stale_seconds % 3600) // 60)
                     max_seconds = int(max_stale_seconds % 60)
 
-                    self.logger_api.warning(
-                        f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
-                        f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
-                        f"Gửi alert cuối cùng, sau đó chỉ log."
-                    )
+                    if is_first_time:
+                        log_msg = (
+                            f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
+                            f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
+                            f"Gửi alert cuối cùng, sau đó chỉ log khi có data mới."
+                        )
+                    else:
+                        log_msg = (
+                            f"[MAX_STALE] {display_name} có data mới nhưng vẫn quá hạn "
+                            f"({hours} giờ {minutes} phút {seconds} giây). Gửi alert."
+                        )
+
+                    self.logger_api.warning(log_msg)
 
                     status_message = f"Data quá cũ (vượt {max_hours} giờ {max_minutes} phút {max_seconds} giây), không có data mới, dừng gửi thông báo"
 

@@ -33,10 +33,6 @@ Các trường:
 - `api` (object):
   - `enable` (bool)
   - `url` (string): endpoint; có thể chứa `{symbol}`
-  - `method` (string): `GET` hoặc `POST`
-  - `headers` (object)
-  - `params` (object)
-  - `timeout_seconds` (int)
   - `record_pointer` (int): index trong array trả về (0 = first/newest theo API, -1 = last/oldest)
   - `column_to_check` (string): tên trường chứa timestamp
   - `nested_list` (bool): true nếu response có nested list
@@ -44,10 +40,8 @@ Các trường:
 - `database` (object):
   - `enable` (bool)
   - `type` / `engine` (string): `mongodb` | `postgresql`
-  - `connection_name` (string): key trỏ tới cấu hình DB trong `common_config.json`
   - `database` (string)
   - `collection_name` / `table` (string)
-  - `query` (object|string): template query hoặc SQL
   - `time_field` / `column_to_check` (string)
   - `record_pointer` (int): 0 = newest, -1 = oldest
 
@@ -60,26 +54,21 @@ Các trường:
 
 - `symbols` (object):
   - `auto_sync` (bool|null): true → lấy distinct từ DB; false → dùng `values`; null → không dùng symbol
-  - `values` (array): danh sách symbol tĩnh
-  - `file_path` (string): đường dẫn file chứa symbol
+  - `values` (array): danh sách symbol muốn check (nếu không dùng auto_sync)
   - `column` (string): tên cột để lấy distinct
-  - `cache_seconds` (int): thời gian cache symbols (mặc định 86400)
 
 - `check` (object):
-  - `enabled` (bool)
   - `timezone_offset` (int): giờ lệch so với UTC (mặc định 7)
-  - `allow_delay` (int, seconds): khoảng cho phép
-  - `check_frequency` (int, seconds)
-  - `alert_frequency` (int, seconds)
-  - `max_stale_seconds` (int|null)
-  - `error_on_missing` (bool)
-  - `time_field` / `time_format` / `time_format_string` (khi custom)
+  - `allow_delay` (int, seconds): Giới hạn thời gian data cũ cho phép
+  - `check_frequency` (int, seconds): Tần số check data
+  - `alert_frequency` (int, seconds): Tần số gửi Log lên Discord/Telegram
+  - `max_stale_seconds` (int|null): Giới hạn data cũ để không gửi Log lên Discord/Telegram nữa
 
 - `schedule` (object):
-  - `valid_days` (array|null): [0..6], 0 = Thứ Hai
-  - `time_ranges` (string|array|null): null = 24/7, hoặc "HH:MM-HH:MM" hoặc danh sách
+  - `valid_days` (array|null): [0..6], 0 = Thứ Hai -> 6 = Chủ nhật
+  - `time_ranges` (string|array|null): null = 24/7, hoặc "HH:MM-HH:MM" hoặc danh sách, Thời gian đứng ở trước < thời gian sau. 
 
-Ví dụ rút gọn (API + symbols inline):
+Ví dụ:
 
 ```json
 "cmc": {
@@ -361,13 +350,10 @@ Nếu chỉ muốn cấu hình một loại nguồn (ví dụ chỉ API), chỉ 
 **Hướng dẫn chạy**
 
 Yêu cầu trước khi chạy:
-- Python 3.8+ (workspace mẫu dùng Python 3.10)
 - Cài dependencies trong `requirements.txt`
 
-Khởi chạy nhanh (Linux):
+Khởi chạy (Linux):
 ```bash
-**QUICK START — CHẠY NHANH**
-
 1) Tạo môi trường ảo và cài phụ thuộc:
 
 ```bash
@@ -376,7 +362,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2) Chạy dịch vụ (linux/mac):
+2) linux:
 
 ```bash
 ./run.sh
@@ -384,16 +370,15 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
-3) Kiểm tra logs: thư mục `logs/` chứa file log quay vòng (RotatingFileHandler).
 
 **CẤU HÌNH (TỔNG QUAN)**
 
 - File chính: `configs/common_config.json` — chứa thông tin nền tảng thông báo (Discord webhook, Telegram token/chat_id) và cấu hình DB chung.
-- File chuyên biệt: `configs/data_sources_config.json` — danh sách các nguồn dữ liệu (mỗi nguồn có các trường `api`, `database`, `disk`, `symbols`, `check`, `schedule`).
+- File cấu hình nguồn dữ liệu: `configs/data_sources_config.json` — danh sách các nguồn dữ liệu (mỗi nguồn có các trường `api`, `database`, `disk`, `symbols`, `check`, `schedule`).
 
-Phần dưới đây giải thích chi tiết từng trường trong `configs/data_sources_config.json` (mẫu và ý nghĩa).
+Chi tiết từng trường trong `configs/data_sources_config.json`.
 
-**Giải thích `configs/data_sources_config.json` (chi tiết)**
+**Giải thích `configs/data_sources_config.json`**
 
 Mỗi entry (ví dụ `cmc`, `vn100`) là một nguồn dữ liệu. Cấu trúc phổ biến:
 
@@ -461,8 +446,6 @@ Ví dụ một entry rút gọn:
   "schedule": {"interval_seconds": 300}
 }
 ```
-
-Ghi chú:
 - Một số nguồn chỉ cần `api`, một số khác cần `database` hoặc `disk`.
 - Trường `symbols` cho phép lấy danh sách động (từ file, từ API như CMC, hoặc inline). Hệ thống cache symbols trong thư mục `cache/` để giảm tải.
 

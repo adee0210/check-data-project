@@ -34,6 +34,9 @@ class AlertTracker:
         self.empty_data_tracking: Dict[str, Dict] = {}
         self.last_holiday_alert_date: Optional[str] = None
 
+        # Track timestamp của data cuối cùng để phát hiện data mới
+        self.last_seen_timestamps: Dict[str, str] = {}
+
     def should_send_alert(self, display_name: str, alert_frequency: int) -> bool:
         """
         Kiểm tra xem có nên gửi alert không dựa vào alert_frequency
@@ -152,7 +155,8 @@ class AlertTracker:
         display_name: str,
         max_stale_seconds: Optional[int],
         total_stale_seconds: int,
-    ) -> Tuple[bool, bool]:
+        data_timestamp: Optional[str] = None,
+    ) -> Tuple[bool, bool, bool]:
         """
         Track stale data và xác định có vượt max_stale không
 
@@ -160,11 +164,13 @@ class AlertTracker:
             display_name: Tên hiển thị của item
             max_stale_seconds: Ngưỡng max stale (None = không có giới hạn)
             total_stale_seconds: Tổng số giây data đã stale
+            data_timestamp: Timestamp của data hiện tại (ISO format string)
 
         Returns:
-            Tuple (exceeds_max, is_first_time):
+            Tuple (exceeds_max, is_first_time, has_new_data):
                 - exceeds_max: True nếu vượt max_stale_seconds
                 - is_first_time: True nếu lần đầu vượt (cần gửi final alert)
+                - has_new_data: True nếu timestamp thay đổi (có data mới)
         """
         current_time = datetime.now()
 
@@ -177,16 +183,25 @@ class AlertTracker:
             max_stale_seconds is not None and total_stale_seconds > max_stale_seconds
         )
 
+        # Kiểm tra có data mới không (nếu có data_timestamp)
+        has_new_data = False
+        if data_timestamp is not None:
+            last_seen = self.last_seen_timestamps.get(display_name)
+            has_new_data = last_seen is None or data_timestamp != last_seen
+            # Cập nhật timestamp đã thấy
+            if has_new_data:
+                self.last_seen_timestamps[display_name] = data_timestamp
+
         if exceeds_max:
             if display_name not in self.max_stale_exceeded:
                 # Lần đầu vượt - cần gửi final alert
                 self.max_stale_exceeded[display_name] = current_time
-                return True, True
+                return True, True, has_new_data
             else:
-                # Đã vượt từ trước - silent mode
-                return True, False
+                # Đã vượt từ trước - chỉ alert nếu có data mới
+                return True, False, has_new_data
 
-        return False, False
+        return False, False, has_new_data
 
     def track_consecutive_stale_days(
         self, display_name: str, low_activity_threshold_days: int = 2

@@ -38,6 +38,10 @@ class CheckDatabase:
         self.last_alert_times = {}
         self.first_stale_times = {}
         self.consecutive_stale_days = {}
+        self.low_activity_symbols = set()
+
+        # Track timestamp của data cuối cùng để phát hiện data mới
+        self.last_seen_timestamps = {}
 
     def _load_config(self):
         """
@@ -313,55 +317,77 @@ class CheckDatabase:
 
                 # ===== CASE 2A: Vượt max_stale_seconds =====
                 if exceeds_max_stale:
-                    if display_name not in self.max_stale_exceeded:
-                        self.max_stale_exceeded[display_name] = current_time
+                    # Lấy timestamp của data hiện tại
+                    current_data_timestamp = dt_latest_time.isoformat()
+                    last_seen_timestamp = self.last_seen_timestamps.get(display_name)
 
-                        hours = int(total_stale_seconds // 3600)
-                        minutes = int((total_stale_seconds % 3600) // 60)
-                        seconds = int(total_stale_seconds % 60)
+                    # Kiểm tra xem có data mới không (timestamp thay đổi)
+                    has_new_data = (
+                        last_seen_timestamp is None
+                        or current_data_timestamp != last_seen_timestamp
+                    )
 
-                        max_hours = int(max_stale_seconds // 3600)
-                        max_minutes = int((max_stale_seconds % 3600) // 60)
-                        max_seconds = int(max_stale_seconds % 60)
+                    if has_new_data:
+                        # Cập nhật timestamp đã thấy
+                        self.last_seen_timestamps[display_name] = current_data_timestamp
 
-                        self.logger_db.warning(
-                            f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
-                            f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
-                            f"Gửi alert cuối cùng, sau đó chỉ log."
-                        )
+                        # Chỉ gửi alert nếu chưa từng gửi (lần đầu vượt max_stale)
+                        if display_name not in self.max_stale_exceeded:
+                            self.max_stale_exceeded[display_name] = current_time
 
-                        status_message = f"Data quá cũ (vượt {max_hours} giờ {max_minutes} phút {max_seconds} giây), không có data mới, dừng gửi thông báo"
+                            hours = int(total_stale_seconds // 3600)
+                            minutes = int((total_stale_seconds % 3600) // 60)
+                            seconds = int(total_stale_seconds % 60)
 
-                        db_cfg = db_config.get("database", {})
-                        source_info = {"type": "DATABASE"}
-                        if "type" in db_cfg:
-                            source_info["database_type"] = db_cfg["type"]
-                        if "database" in db_cfg:
-                            source_info["database"] = db_cfg["database"]
-                        if "collection_name" in db_cfg:
-                            source_info["collection"] = db_cfg["collection_name"]
-                        elif "table_name" in db_cfg:
-                            source_info["table"] = db_cfg["table_name"]
+                            max_hours = int(max_stale_seconds // 3600)
+                            max_minutes = int((max_stale_seconds % 3600) // 60)
+                            max_seconds = int(max_stale_seconds % 60)
 
-                        self.platform_util.send_alert(
-                            api_name=db_name,
-                            symbol=symbol,
-                            overdue_seconds=overdue_seconds,
-                            allow_delay=allow_delay,
-                            check_frequency=check_frequency,
-                            alert_frequency=alert_frequency,
-                            alert_level="warning",
-                            error_message="Không có dữ liệu mới",
-                            source_info=source_info,
-                            status_message=status_message,
-                        )
-                        self.last_alert_times[display_name] = current_time
+                            self.logger_db.warning(
+                                f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
+                                f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
+                                f"Gửi alert cuối cùng, sau đó chỉ log khi có data mới."
+                            )
+
+                            status_message = f"Data quá cũ (vượt {max_hours} giờ {max_minutes} phút {max_seconds} giây), không có data mới, dừng gửi thông báo"
+
+                            db_cfg = db_config.get("database", {})
+                            source_info = {"type": "DATABASE"}
+                            if "type" in db_cfg:
+                                source_info["database_type"] = db_cfg["type"]
+                            if "database" in db_cfg:
+                                source_info["database"] = db_cfg["database"]
+                            if "collection_name" in db_cfg:
+                                source_info["collection"] = db_cfg["collection_name"]
+                            elif "table_name" in db_cfg:
+                                source_info["table"] = db_cfg["table_name"]
+
+                            self.platform_util.send_alert(
+                                api_name=db_name,
+                                symbol=symbol,
+                                overdue_seconds=overdue_seconds,
+                                allow_delay=allow_delay,
+                                check_frequency=check_frequency,
+                                alert_frequency=alert_frequency,
+                                alert_level="warning",
+                                error_message="Không có dữ liệu mới",
+                                source_info=source_info,
+                                status_message=status_message,
+                            )
+                            self.last_alert_times[display_name] = current_time
+                        else:
+                            # Data vẫn cũ nhưng có cập nhật mới (timestamp khác) - log
+                            self.logger_db.info(
+                                f"[MAX_STALE] {display_name} có data mới nhưng vẫn quá hạn ({int(total_stale_seconds/3600)} giờ), chỉ log"
+                            )
                     else:
-                        self.logger_db.info(
-                            f"[SILENT MODE] {display_name} vẫn không có data, chỉ log (không gửi alert)"
+                        # Không có data mới (timestamp không thay đổi) - chỉ log, không gửi alert
+                        self.logger_db.debug(
+                            f"[SILENT MODE] {display_name} vẫn không có data mới, chỉ log (không gửi alert)"
                         )
 
-                    # Track consecutive stale days
+                    # Track consecutive stale days cho low-activity detection
+                    # (giữ lại logic này để phát hiện symbols không giao dịch)
                     last_check = self.consecutive_stale_days.get(display_name)
                     if last_check is None:
                         self.consecutive_stale_days[display_name] = (current_date, 1)

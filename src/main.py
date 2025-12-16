@@ -46,16 +46,25 @@ logger = logging.getLogger("MainProcess")
 # Initialize PlatformManager for shutdown alerts
 platform_manager = PlatformManager()
 
+# Flag để tránh gửi alert duplicate khi shutdown bình thường
+_shutdown_handled = False
 
-def send_shutdown_alert(reason="Hệ thống đã dừng"):
+
+def send_shutdown_alert(reason="Hệ thống đã dừng", alert_level="info"):
     """
     Gửi alert khi hệ thống shutdown
 
     Args:
         reason: Lý do shutdown
+        alert_level: Mức độ alert ("info" cho shutdown bình thường, "error" cho lỗi)
     """
+    global _shutdown_handled
+    if _shutdown_handled:
+        return
+
     try:
-        logger.warning(f"📤 Gửi alert shutdown: {reason}")
+        log_func = logger.info if alert_level == "info" else logger.warning
+        log_func(f"📤 Gửi alert shutdown: {reason}")
         platform_manager.send_alert(
             api_name="SYSTEM",
             symbol=None,
@@ -63,31 +72,37 @@ def send_shutdown_alert(reason="Hệ thống đã dừng"):
             allow_delay=0,
             check_frequency=0,
             alert_frequency=0,
-            alert_level="error",
+            alert_level=alert_level,
             error_message=f"Hệ thống giám sát đã dừng hoạt động - {reason}",
             error_type="SYSTEM",
             source_info={"type": "SYSTEM", "message": "Data monitoring system stopped"},
         )
+        _shutdown_handled = True
     except Exception as e:
         logger.error(f"❌ Lỗi gửi shutdown alert: {e}")
 
 
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully"""
+    global _shutdown_handled
     logger.info("=" * 80)
     logger.info("🛑 Nhận tín hiệu dừng hệ thống - Đang tắt giám sát...")
     logger.info("=" * 80)
 
-    # Gửi alert trước khi tắt
-    send_shutdown_alert("Nhận tín hiệu SIGTERM/SIGINT")
+    # Gửi alert INFO cho shutdown có kiểm soát
+    send_shutdown_alert("Nhận tín hiệu SIGTERM/SIGINT", alert_level="info")
+    _shutdown_handled = True
 
     sys.exit(0)
 
 
 def on_exit():
-    """Handler khi chương trình thoát (cả normal và abnormal)"""
-    logger.warning("⚠️ Chương trình đang thoát...")
-    send_shutdown_alert("Chương trình thoát bất thường")
+    """Handler khi chương trình thoát bất thường (crash/exception)"""
+    global _shutdown_handled
+    # Chỉ gửi alert nếu chưa được xử lý bởi signal handler
+    if not _shutdown_handled:
+        logger.warning("⚠️ Chương trình thoát bất thường...")
+        send_shutdown_alert("Chương trình thoát bất thường", alert_level="error")
 
 
 # Register signal handlers
@@ -148,7 +163,7 @@ async def main():
     except Exception as e:
         logger.error(f"❌ LỖI NGHIÊM TRỌNG trong main: {e}", exc_info=True)
         # Gửi alert về lỗi nghiêm trọng
-        send_shutdown_alert(f"Lỗi nghiêm trọng: {str(e)}")
+        send_shutdown_alert(f"Lỗi nghiêm trọng: {str(e)}", alert_level="error")
         raise
     finally:
         logger.info("=" * 80)
