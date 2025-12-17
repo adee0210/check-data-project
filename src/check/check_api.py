@@ -284,19 +284,6 @@ class CheckAPI:
                 # Xử lý lỗi API - gửi cảnh báo
                 current_time = datetime.now()
 
-                # Kiểm tra xem có đang trong silent mode cho EMPTY_DATA không
-                if error_type == "API_WARNING":
-                    is_silent, _ = self.tracker.track_empty_data(
-                        display_name, silent_threshold_seconds=0
-                    )
-                    if is_silent:
-                        # Silent mode - chỉ log, không gửi alert
-                        self.logger_api.debug(
-                            f"[EMPTY_DATA SILENT] {display_name} vẫn empty data, skip alert (silent mode)"
-                        )
-                        await asyncio.sleep(check_frequency)
-                        continue
-
                 should_send_alert = self.tracker.should_send_alert(
                     display_name, alert_frequency
                 )
@@ -351,34 +338,9 @@ class CheckAPI:
             current_time = datetime.now()
             current_date = current_time.strftime("%Y-%m-%d")
 
-            # Reset empty_data_tracking nếu API trả về data thành công
-            duration = self.tracker.reset_empty_data(display_name)
-            if duration is not None:
-                self.logger_api.info(
-                    f"[EMPTY_DATA RESOLVED] {display_name} đã có data sau {int(duration/60)} phút empty. Reset tracking."
-                )
-
-            # ===== EARLY CHECK: Low-activity symbol - chỉ log, không gửi alert =====
-            if self.tracker.is_low_activity(display_name):
-                if is_fresh:
-                    # Data mới xuất hiện - log nhưng KHÔNG xóa khỏi low_activity
-                    # (vì đã xác định là giao dịch thấp)
-                    self.logger_api.info(
-                        f"[LOW-ACTIVITY] {display_name} có data mới nhưng vẫn được đánh dấu low-activity, không gửi alert"
-                    )
-                else:
-                    self.logger_api.debug(
-                        f"[LOW-ACTIVITY] {display_name} không có data mới, skip alert"
-                    )
-                await asyncio.sleep(check_frequency)
-                continue
-
             # ===== CASE 1: Data FRESH - Reset tất cả tracking =====
             if is_fresh:
                 # Reset tracking
-                if self.tracker.is_in_silent_mode(display_name):
-                    self.logger_api.info(f"{display_name} có data mới, reset tracking")
-
                 self.tracker.reset_fresh_data(display_name)
 
                 self.logger_api.info(f"Kiểm tra API {display_name} - Có dữ liệu mới")

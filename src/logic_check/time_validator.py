@@ -1,4 +1,8 @@
+import logging
 from datetime import datetime, timezone, timedelta
+
+
+logger = logging.getLogger(__name__)
 
 
 class TimeValidator:
@@ -34,7 +38,7 @@ class TimeValidator:
             if current_weekday not in days:
                 return False
 
-        # Kiểm tra giờ: None = 24h, "HH:MM-HH:MM" = khoảng thời gian, ["...", "..."] = nhiều khoảng
+        # Kiểm tra giờ: None = 24h, "HH:MM:SS-HH:MM:SS" = khoảng thời gian, ["...", "..."] = nhiều khoảng
         if hours is None:
             return True  # Không giới hạn giờ
 
@@ -63,13 +67,24 @@ class TimeValidator:
         if not hour_range or "-" not in hour_range:
             return True
 
+        def _parse_time(tstr: str):
+            """Parse time string. Only accepts HH:MM:SS now (strict)."""
+            tstr = tstr.strip()
+            try:
+                return datetime.strptime(tstr, "%H:%M:%S").time()
+            except ValueError:
+                raise ValueError(f"Invalid time format (expected HH:MM:SS): {tstr}")
+
         try:
-            start_str, end_str = hour_range.split("-")
-            start_time = datetime.strptime(start_str.strip(), "%H:%M").time()
-            end_time = datetime.strptime(end_str.strip(), "%H:%M").time()
+            start_str, end_str = hour_range.split("-", 1)
+            start_time = _parse_time(start_str)
+            end_time = _parse_time(end_str)
             return start_time <= current_time <= end_time
-        except (ValueError, AttributeError):
-            return True  # Nếu format sai, cho phép
+        except (ValueError, AttributeError) as e:
+            logger.warning(
+                "Invalid schedule time range '%s' encountered: %s", hour_range, e
+            )
+            return False
 
     @staticmethod
     def is_within_valid_schedule(valid_schedule, timezone_offset=7):
@@ -149,13 +164,24 @@ class TimeValidator:
             time_valid = True
             if start_str and end_str:
                 try:
-                    start_time = datetime.strptime(start_str, "%H:%M").time()
-                    end_time = datetime.strptime(end_str, "%H:%M").time()
-                    time_valid = start_time <= current_time <= end_time
-                except ValueError:
-                    time_valid = True
 
-            # Nếu cả ngày và giờ đều hợp lệ thì return True
+                    def _parse_time_local(tstr: str):
+                        try:
+                            return datetime.strptime(tstr, "%H:%M:%S").time()
+                        except ValueError:
+                            raise ValueError(
+                                f"Invalid time format (expected HH:MM:SS): {tstr}"
+                            )
+
+                    start_time = _parse_time_local(start_str)
+                    end_time = _parse_time_local(end_str)
+                    time_valid = start_time <= current_time <= end_time
+                except ValueError as e:
+                    logger.warning(
+                        "Invalid schedule period '%s' for '%s': %s", period, schedule, e
+                    )
+                    time_valid = False
+
             if day_valid and time_valid:
                 return True
 

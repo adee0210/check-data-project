@@ -140,25 +140,12 @@ class CheckDatabase:
                         error_type = "DATABASE_WARNING"
                         db_error = True
 
-                        # Track empty data - chỉ gửi alert lần đầu, sau đó silent ngay
-                        is_silent, duration = self.tracker.track_empty_data(
-                            display_name, silent_threshold_seconds=0
-                        )
-
-                        if is_silent and duration is not None:
-                            self.logger_db.info(
-                                f"[EMPTY_DATA] {display_name} đã gửi alert lần đầu. "
-                                f"Chuyển silent mode - chỉ log, không gửi alert nữa."
-                            )
-
                         self.logger_db.warning(
                             f"Cảnh báo Database: {error_message} cho {display_name}"
                         )
-                # Convert query result to datetime (support str or datetime)
                 if isinstance(latest_time, datetime):
                     dt_latest_time = latest_time
                 else:
-                    # Try to parse string/date formats
                     dt_latest_time = ConvertDatetimeUtil.convert_str_to_datetime(
                         latest_time
                     )
@@ -177,53 +164,13 @@ class CheckDatabase:
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
-                # Reset empty_data_tracking nếu database có data trở lại
-                duration = self.tracker.reset_empty_data(display_name)
-                if duration is not None:
-                    self.logger_db.info(
-                        f"[EMPTY_DATA RESOLVED] {display_name} đã có data sau {int(duration/60)} phút empty. Reset tracking."
-                    )
-
-                # ===== EARLY CHECK: Low-activity symbol - chỉ log, không gửi alert =====
-                if self.tracker.is_low_activity(display_name):
-                    if is_fresh:
-                        self.logger_db.info(
-                            f"[LOW-ACTIVITY] {display_name} có data mới nhưng vẫn được đánh dấu low-activity, không gửi alert"
-                        )
-                    else:
-                        self.logger_db.debug(
-                            f"[LOW-ACTIVITY] {display_name} không có data mới, skip alert"
-                        )
-                    await asyncio.sleep(check_frequency)
-                    continue
-
-                # ===== CASE 1: Data FRESH - Reset tất cả tracking =====
                 if is_fresh:
-                    if display_name in self.max_stale_exceeded:
-                        self.logger_db.info(
-                            f"{display_name} có data mới, reset max_stale_exceeded tracking"
-                        )
-                        del self.max_stale_exceeded[display_name]
-
-                    if display_name in self.last_alert_times:
-                        del self.last_alert_times[display_name]
-
-                    if display_name in self.first_stale_times:
-                        del self.first_stale_times[display_name]
-
-                    if display_name in self.consecutive_stale_days:
-                        self.logger_db.info(
-                            f"{display_name} có data mới, reset consecutive_stale_days"
-                        )
-                        del self.consecutive_stale_days[display_name]
-
                     self.logger_db.info(
                         f"Kiểm tra database {display_name} - Có dữ liệu mới"
                     )
                     await asyncio.sleep(check_frequency)
                     continue
 
-                # ===== CASE 2: Data STALE - Xử lý phức tạp =====
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
                 )
@@ -234,7 +181,6 @@ class CheckDatabase:
                 latest_data_date = dt_latest_time.strftime("%Y-%m-%d")
                 is_data_from_today = latest_data_date == current_date
 
-                # CASE 2: Data STALE - Alert normally (no max_stale suppression)
                 stale_count = self.tracker.get_stale_count()
                 total_dbs = max(stale_count, 1)
 

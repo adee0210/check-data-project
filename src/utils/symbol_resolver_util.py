@@ -19,7 +19,6 @@ class SymbolResolverUtil:
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cache"
     )
 
-    # Cache expiry: 24 hours (symbols thường không thay đổi thường xuyên)
     CACHE_EXPIRY_HOURS = 24
 
     @staticmethod
@@ -245,7 +244,6 @@ class SymbolResolverUtil:
             list: Danh sách symbols
         """
         try:
-            # Reuse DatabaseConfig singleton instance
             db_connector = SymbolResolverUtil._get_db_connector()
 
             # Build config cho PostgreSQL connection
@@ -280,7 +278,6 @@ class SymbolResolverUtil:
 
             symbols = [row[0] for row in cursor.fetchall()]
 
-            # Đóng cursor (nhưng KHÔNG đóng connection - để reuse)
             cursor.close()
 
             return symbols
@@ -301,7 +298,7 @@ class SymbolResolverUtil:
            - Bỏ qua symbols.values trong config (nếu có)
 
         2. Nếu symbols.auto_sync = false hoặc không có:
-           - Dùng symbols.values được định nghĩa thủ công trong config
+           - Dùng symbols.values được định nghĩa trong config
            - Nếu không có symbols.values → skip API này
 
         3. Nếu symbols.auto_sync = null:
@@ -333,11 +330,11 @@ class SymbolResolverUtil:
             else:
                 SymbolResolverUtil.logger.warning(
                     f"[{api_name}] Không tìm thấy symbols từ database. "
-                    f"Kiểm tra database config hoặc chuyển sang auto_sync=false để nhập thủ công."
+                    f"Kiểm tra database config hoặc chuyển sang auto_sync=false và tự nhập các cái muốn lấy."
                 )
                 return []
 
-        # Case 2: auto_sync = false → Dùng symbols thủ công
+        # Case 2: auto_sync = false → Dùng symbols tự nhập
         elif auto_sync_symbols is False:
             if (
                 symbols_values is not None
@@ -345,13 +342,13 @@ class SymbolResolverUtil:
                 and len(symbols_values) > 0
             ):
                 SymbolResolverUtil.logger.info(
-                    f"[{api_name}] symbols.auto_sync=false, sử dụng {len(symbols_values)} symbols thủ công: {symbols_values}"
+                    f"[{api_name}] symbols.auto_sync=false, sử dụng {len(symbols_values)} symbols tự nhập vào: {symbols_values}"
                 )
                 return symbols_values
             else:
                 SymbolResolverUtil.logger.warning(
                     f"[{api_name}] symbols.auto_sync=false nhưng không có symbols.values được định nghĩa. "
-                    f'Vui lòng thêm "values": ["SYMBOL1", "SYMBOL2"] vào config.'
+                    f'Hãy thêm "values": ["SYMBOL1", "SYMBOL2"] vào config.'
                 )
                 return []
 

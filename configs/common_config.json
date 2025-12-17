@@ -1,13 +1,13 @@
 {
     "PLATFORM_CONFIG": {
         "discord": {
-            "webhooks_url": "https://discord.com/api/webhooks/1450020771450585121/vaAyEWssF72gRv1bemxufWP4dOLdn9KJQ3Yqxadwra3A36d9xBYRr7YBr4UQzavPgV0E",
+            "webhooks_url": "https://discord.com/api/webhooks/1450754615892115468/PkffEIeZuZANisJLuWO7tF0s_Y838LvMR_SMotNMOifLBZyLdyWmEF4UqZ9mrAEYNiQN",
             "is_primary": true
         },
         "telegram": {
             "bot_token": "8557699553:AAHmWW_kk5KUe5KmlIcEp9iCa9U3cK4pNUg",
             "chat_id": "6612930388",
-            "is_primary": true
+            "is_primary": false
         }
     },
     "DATABASE_CONNECTIONS": {
