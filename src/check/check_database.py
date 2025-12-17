@@ -58,6 +58,33 @@ class CheckDatabase:
             if v.get("database", {}).get("enable", False)
         }
 
+    def _get_active_start_time(self, time_ranges, current_time):
+        """
+        Get the start time of the active range that the current time belongs to.
+
+        Args:
+            time_ranges (list): List of time ranges in "HH:MM:SS-HH:MM:SS" format.
+            current_time (datetime): The current time.
+
+        Returns:
+            datetime: The start time of the active range, or None if outside all ranges.
+        """
+        for time_range in time_ranges:
+            start_str, end_str = time_range.split("-")
+            start_time = current_time.replace(
+                hour=int(start_str[:2]),
+                minute=int(start_str[3:5]),
+                second=int(start_str[6:]),
+            )
+            end_time = current_time.replace(
+                hour=int(end_str[:2]), minute=int(end_str[3:5]), second=int(end_str[6:])
+            )
+
+            if start_time <= current_time <= end_time:
+                return start_time
+
+        return None
+
     async def check_data_database(self, db_name, db_config, symbol=None):
         """
         Hàm logic kiểm tra data từ database chạy liên tục
@@ -88,7 +115,6 @@ class CheckDatabase:
                 allow_delay = check_cfg.get("allow_delay", 60)
                 alert_frequency = check_cfg.get("alert_frequency", 60)
                 check_frequency = check_cfg.get("check_frequency", 10)
-                # Note: max_stale_seconds removed — always use alert_frequency behaviour
 
                 valid_schedule = schedule_cfg
 

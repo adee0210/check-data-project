@@ -335,6 +335,18 @@ class CheckAPI:
                 dt_record_pointer_data_with_column_to_check, allow_delay
             )
 
+            # Calculate adjusted overdue time using DataValidator
+            active_start_time = DataValidator.get_active_start_time(
+                schedule_cfg.get("time_ranges", []), datetime.now()
+            )
+
+            if active_start_time:
+                overdue_seconds = DataValidator.calculate_adjusted_overdue(
+                    datetime.now(), datetime.now(), schedule_cfg.get("time_ranges", [])
+                )
+            else:
+                overdue_seconds = 0  # Outside active ranges
+
             current_time = datetime.now()
             current_date = current_time.strftime("%Y-%m-%d")
 
