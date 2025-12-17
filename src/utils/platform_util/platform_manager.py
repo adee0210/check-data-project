@@ -248,32 +248,14 @@ class PlatformManager:
             return False
 
     def send_holiday_alert(self, message: str) -> Dict[str, bool]:
+        """Holiday alerts removed — no-op.
+
+        Kept for compatibility; returns empty mapping.
         """
-        Gửi holiday alert đến tất cả primary platforms
-
-        Args:
-            message: Holiday alert message
-
-        Returns:
-            Dict {platform_name: success_status}
-        """
-        results = {}
-        primary_platforms = self.get_primary_platforms()
-
-        for platform_name in primary_platforms:
-            notifier = self.notifiers[platform_name]
-
-            if hasattr(notifier, "send_holiday_alert"):
-                try:
-                    success = notifier.send_holiday_alert(message)
-                    results[platform_name] = success
-                except Exception as e:
-                    self.logger.error(
-                        f"Lỗi gửi holiday alert qua {platform_name}: {str(e)}"
-                    )
-                    results[platform_name] = False
-
-        return results
+        self.logger.debug(
+            "Holiday alerts are disabled; ignoring send_holiday_alert call"
+        )
+        return {}
 
     def list_supported_platforms(self) -> List[str]:
         """

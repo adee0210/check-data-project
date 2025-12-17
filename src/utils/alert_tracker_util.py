@@ -14,25 +14,22 @@ class AlertTracker:
     Attributes:
         last_alert_times: Track lần alert cuối cho mỗi item
         first_stale_times: Track lần đầu tiên data bị stale
-        suspected_holidays: Track ngày lễ nghi ngờ
         outside_schedule_logged: Track trạng thái outside schedule
         max_stale_exceeded: Track items vượt quá max_stale_seconds
         low_activity_symbols: Set các symbol đã xác định low-activity
         consecutive_stale_days: Track số ngày liên tiếp stale
         empty_data_tracking: Track empty data warnings
-        last_holiday_alert_date: Track ngày gửi alert holiday cuối
     """
 
     def __init__(self):
         self.last_alert_times: Dict[str, datetime] = {}
         self.first_stale_times: Dict[str, datetime] = {}
-        self.suspected_holidays: Dict[str, datetime] = {}
         self.outside_schedule_logged: Dict[str, bool] = {}
         self.max_stale_exceeded: Dict[str, datetime] = {}
         self.low_activity_symbols: Set[str] = set()
         self.consecutive_stale_days: Dict[str, Tuple[str, int]] = {}
         self.empty_data_tracking: Dict[str, Dict] = {}
-        self.last_holiday_alert_date: Optional[str] = None
+        # Note: holiday detection removed — no holiday tracking
 
         # Track timestamp của data cuối cùng để phát hiện data mới
         self.last_seen_timestamps: Dict[str, str] = {}
@@ -265,27 +262,7 @@ class AlertTracker:
         if display_name in self.empty_data_tracking:
             del self.empty_data_tracking[display_name]
 
-    def check_holiday_pattern(
-        self, current_date: str, is_data_from_today: bool, total_apis: int
-    ) -> bool:
-        """
-        Kiểm tra pattern ngày lễ dựa vào số lượng API stale
-
-        Args:
-            current_date: Ngày hiện tại (YYYY-MM-DD)
-            is_data_from_today: Data có từ hôm nay không
-            total_apis: Tổng số API đang check
-
-        Returns:
-            True nếu nghi ngờ là ngày lễ, False nếu không
-        """
-        stale_count = len(self.first_stale_times)
-
-        is_suspected = (not is_data_from_today) and (
-            stale_count >= max(2, int(total_apis * 0.5))
-        )
-
-        return is_suspected
+    # Holiday detection removed by request: alerts rely only on alert_frequency
 
     def get_stale_count(self) -> int:
         """

@@ -161,26 +161,8 @@ class TelegramNotifier(BasePlatformNotifier):
         Returns:
             True nếu gửi thành công
         """
-        if not self.is_enabled():
-            return False
-
-        bot_token = self.config["bot_token"]
-        chat_id = self.config["chat_id"]
-
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-
-        formatted_message = f"🟡 *NGHI NGỜ NGÀY LỄ*\n\n{message}"
-
-        payload = {
-            "chat_id": chat_id,
-            "text": formatted_message,
-            "parse_mode": "Markdown",
-        }
-
-        try:
-            response = requests.post(url, json=payload, timeout=10)
-            return response.status_code == 200
-
-        except Exception as e:
-            self.logger.error(f"Lỗi gửi holiday alert đến Telegram: {str(e)}")
-            return False
+        # Holiday alerts disabled — method retained for compatibility
+        self.logger.debug(
+            "Holiday alert disabled in Telegram notifier; ignoring request"
+        )
+        return False

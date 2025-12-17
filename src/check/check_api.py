@@ -78,10 +78,9 @@ class CheckAPI:
             allow_delay = check_cfg.get("allow_delay", 60)
             alert_frequency = check_cfg.get("alert_frequency", 60)
             check_frequency = check_cfg.get("check_frequency", 10)
-            max_stale_seconds = check_cfg.get("max_stale_seconds", None)
+            # Note: max_stale_seconds removed — always use alert_frequency behaviour
 
             valid_schedule = schedule_cfg
-            holiday_grace_period = check_cfg.get("holiday_grace_period", 2 * 3600)
 
             if symbol:
                 uri = uri.format(symbol=symbol)
@@ -395,147 +394,32 @@ class CheckAPI:
             )
             is_data_from_today = latest_data_date == current_date
 
-            # Check nếu vượt max_stale_seconds
-            total_stale_seconds = overdue_seconds + allow_delay
-            data_timestamp = dt_record_pointer_data_with_column_to_check.isoformat()
-            exceeds_max_stale, is_first_time, has_new_data = (
-                self.tracker.track_stale_data(
-                    display_name, max_stale_seconds, total_stale_seconds, data_timestamp
-                )
+            # CASE 2: Data STALE - Alert normally (no max_stale suppression)
+            stale_count = self.tracker.get_stale_count()
+            total_apis = max(stale_count, 1)
+
+            self.logger_api.warning(
+                f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
             )
 
-            # ===== CASE 2A: Vượt max_stale_seconds =====
-            if exceeds_max_stale:
-                # Chỉ gửi alert nếu:
-                # 1) Lần đầu vượt max_stale (is_first_time=True), HOẶC
-                # 2) Có data mới (has_new_data=True) nhưng vẫn quá hạn
-                should_alert = is_first_time or (has_new_data and not is_first_time)
+            should_send_alert = self.tracker.should_send_alert(
+                display_name, alert_frequency
+            )
 
-                if should_alert:
-                    hours = int(total_stale_seconds // 3600)
-                    minutes = int((total_stale_seconds % 3600) // 60)
-                    seconds = int(total_stale_seconds % 60)
-
-                    max_hours = int(max_stale_seconds // 3600)
-                    max_minutes = int((max_stale_seconds % 3600) // 60)
-                    max_seconds = int(max_stale_seconds % 60)
-
-                    if is_first_time:
-                        log_msg = (
-                            f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
-                            f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
-                            f"Gửi alert cuối cùng, sau đó chỉ log khi có data mới."
-                        )
-                    else:
-                        log_msg = (
-                            f"[MAX_STALE] {display_name} có data mới nhưng vẫn quá hạn "
-                            f"({hours} giờ {minutes} phút {seconds} giây). Gửi alert."
-                        )
-
-                    self.logger_api.warning(log_msg)
-
-                    status_message = f"Data quá cũ (vượt {max_hours} giờ {max_minutes} phút {max_seconds} giây), không có data mới, dừng gửi thông báo"
-
-                    source_info = {"type": "API", "url": uri}
-
-                    self.platform_util.send_alert(
-                        api_name=api_name,
-                        symbol=symbol,
-                        overdue_seconds=overdue_seconds,
-                        allow_delay=allow_delay,
-                        check_frequency=check_frequency,
-                        alert_frequency=alert_frequency,
-                        alert_level="warning",
-                        error_message="Không có dữ liệu mới",
-                        source_info=source_info,
-                        status_message=status_message,
-                    )
-                    self.tracker.record_alert_sent(display_name)
-                else:
-                    # Đã gửi alert rồi - chỉ log
-                    self.logger_api.info(
-                        f"[SILENT MODE] {display_name} vẫn không có data, chỉ log (không gửi alert)"
-                    )
-
-                # Track consecutive stale days để phát hiện low-activity
-                consecutive_days, became_low_activity = (
-                    self.tracker.track_consecutive_stale_days(
-                        display_name, low_activity_threshold_days=2
-                    )
+            if should_send_alert:
+                source_info = {"type": "API", "url": uri}
+                self.platform_util.send_alert(
+                    api_name=api_name,
+                    symbol=symbol,
+                    overdue_seconds=overdue_seconds,
+                    allow_delay=allow_delay,
+                    check_frequency=check_frequency,
+                    alert_frequency=alert_frequency,
+                    alert_level="warning",
+                    error_message="Không có dữ liệu mới",
+                    source_info=source_info,
                 )
-
-                if became_low_activity:
-                    self.logger_api.warning(
-                        f"[LOW-ACTIVITY DETECTED] {display_name} đã {consecutive_days} ngày liên tiếp không có data. "
-                        f"Đánh dấu là giao dịch thấp, dừng gửi alert vĩnh viễn."
-                    )
-
-            # ===== CASE 2B: Chưa vượt max_stale - Alert bình thường =====
-            else:
-                # Đếm số API stale để phát hiện ngày lễ
-                stale_count = self.tracker.get_stale_count()
-                total_apis = max(stale_count, 1)
-
-                is_suspected_holiday = self.tracker.check_holiday_pattern(
-                    current_date, is_data_from_today, total_apis
-                )
-
-                self.logger_api.warning(
-                    f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
-                    f"{' (Nghi ngờ ngày lễ)' if is_suspected_holiday else ''}"
-                )
-
-                # Kiểm tra alert_frequency
-                should_send_alert = self.tracker.should_send_alert(
-                    display_name, alert_frequency
-                )
-
-                if should_send_alert:
-                    if is_suspected_holiday:
-                        # Chỉ gửi alert ngày lễ 1 lần mỗi ngày
-                        if self.tracker.last_holiday_alert_date != current_date:
-                            context_message = (
-                                f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_apis} API đang thiếu data). "
-                                f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
-                            )
-                            source_info = {"type": "API", "url": uri}
-
-                            self.platform_util.send_alert(
-                                api_name=api_name,
-                                symbol=symbol,
-                                overdue_seconds=overdue_seconds,
-                                allow_delay=allow_delay,
-                                check_frequency=check_frequency,
-                                alert_frequency=alert_frequency,
-                                alert_level="warning",
-                                error_message=context_message,
-                                source_info=source_info,
-                            )
-                            self.tracker.record_alert_sent(display_name)
-                            self.tracker.last_holiday_alert_date = current_date
-                            self.logger_api.info(
-                                f"Đã gửi alert ngày lễ cho {display_name}"
-                            )
-                        else:
-                            self.logger_api.info(
-                                f"Đã gửi alert ngày lễ hôm nay, skip để tránh spam"
-                            )
-                    else:
-                        # Alert bình thường
-                        source_info = {"type": "API", "url": uri}
-
-                        self.platform_util.send_alert(
-                            api_name=api_name,
-                            symbol=symbol,
-                            overdue_seconds=overdue_seconds,
-                            allow_delay=allow_delay,
-                            check_frequency=check_frequency,
-                            alert_frequency=alert_frequency,
-                            alert_level="warning",
-                            error_message="Không có dữ liệu mới",
-                            source_info=source_info,
-                        )
-                        self.tracker.record_alert_sent(display_name)
+                self.tracker.record_alert_sent(display_name)
 
             # Sleep theo check_frequency
             await asyncio.sleep(check_frequency)

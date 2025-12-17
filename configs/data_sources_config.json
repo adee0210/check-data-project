@@ -24,8 +24,7 @@
             "timezone_offset": 7,
             "allow_delay": 120,
             "check_frequency": 10,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": [
@@ -63,8 +62,7 @@
             "timezone_offset": 0,
             "allow_delay": 1800,
             "check_frequency": 60,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": null,
@@ -88,16 +86,24 @@
             "user_connect": "duc_le_connect"
         },
         "symbols": {
-            "auto_sync": true,
-            "values": null,
+            "auto_sync": false,
+            "values": [
+                "E1VFVN30",
+                "FUEIP100",
+                "FUEMAV30",
+                "FUESSV30",
+                "FUESSV50",
+                "FUESSVFL",
+                "FUEVFVND",
+                "FUEVN100"
+            ],
             "column": "symbol"
         },
         "check": {
             "timezone_offset": 0,
             "allow_delay": 3600,
             "check_frequency": 10,
-            "alert_frequency": 300,
-            "max_stale_seconds": 3600
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": [
@@ -139,8 +145,7 @@
             "timezone_offset": 7,
             "allow_delay": 86400,
             "check_frequency": 60,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": null,
@@ -166,8 +171,7 @@
             "timezone_offset": 7,
             "allow_delay": 10,
             "check_frequency": 30,
-            "alert_frequency": 180,
-            "max_stale_seconds": 604800
+            "alert_frequency": 180
         },
         "schedule": {
             "valid_days": [
@@ -201,10 +205,9 @@
         },
         "check": {
             "timezone_offset": 7,
-            "allow_delay": 30,
+            "allow_delay": 60,
             "check_frequency": 10,
-            "alert_frequency": 180,
-            "max_stale_seconds": 604800
+            "alert_frequency": 180
         },
         "schedule": {
             "valid_days": [
@@ -246,8 +249,7 @@
             "timezone_offset": 7,
             "allow_delay": 86400,
             "check_frequency": 10,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": [
@@ -290,8 +292,7 @@
             "timezone_offset": 7,
             "allow_delay": 86400,
             "check_frequency": 10,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": [
@@ -323,8 +324,7 @@
             "timezone_offset": 7,
             "allow_delay": 180,
             "check_frequency": 10,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": [
@@ -358,8 +358,7 @@
             "timezone_offset": 7,
             "allow_delay": 180,
             "check_frequency": 10,
-            "alert_frequency": 300,
-            "max_stale_seconds": 604800
+            "alert_frequency": 300
         },
         "schedule": {
             "valid_days": [

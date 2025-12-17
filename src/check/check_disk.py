@@ -16,6 +16,322 @@ from utils.platform_util.platform_manager import PlatformManager
 
 
 class CheckDisk:
+    def __init__(self):
+        self.logger_disk = LoggerConfig.logger_config("CheckDisk", "disk.log")
+        self.task_manager_disk = TaskManager()
+        self.platform_util = PlatformManager()
+        self.tracker = AlertTracker()
+        self.outside_schedule_logged = {}
+        self.last_alert_times = {}
+
+    def _load_config(self):
+        all_config = LoadConfigUtil.load_json_to_variable("data_sources_config.json")
+        return {
+            k: v
+            for k, v in all_config.items()
+            if v.get("disk", {}).get("enable", False)
+        }
+
+    def _read_datetime_from_file(
+        self, file_path: str, file_type: str, record_pointer: int, column_to_check: str
+    ) -> datetime:
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Không tìm thấy file: {file_path}")
+
+        if file_type == "json":
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list) or len(data) == 0:
+                raise ValueError("File JSON rỗng hoặc không phải array")
+            record_index = -1 if record_pointer == 0 else 0
+            record = data[record_index]
+            if column_to_check not in record:
+                raise ValueError(
+                    f"Không tìm thấy column '{column_to_check}' trong record"
+                )
+            return ConvertDatetimeUtil.convert_str_to_datetime(record[column_to_check])
+
+        if file_type == "csv":
+            with open(path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            if len(rows) == 0:
+                raise ValueError("File CSV không có dữ liệu (chỉ có header hoặc rỗng)")
+            record_index = -1 if record_pointer == 0 else 0
+            record = rows[record_index]
+            if column_to_check not in record:
+                raise ValueError(f"Không tìm thấy column '{column_to_check}' trong CSV")
+            return ConvertDatetimeUtil.convert_str_to_datetime(record[column_to_check])
+
+        if file_type == "txt":
+            with open(path, "r", encoding="utf-8") as f:
+                lines = [l.strip() for l in f if l.strip()]
+            if not lines:
+                raise ValueError("File TXT rỗng")
+            line_index = -1 if record_pointer == 0 else 0
+            return ConvertDatetimeUtil.convert_str_to_datetime(lines[line_index])
+
+        raise ValueError(
+            f"File type không hỗ trợ: {file_type}. Chỉ hỗ trợ json, csv, txt, mtime"
+        )
+
+    async def check_data_disk(self, disk_name, disk_config, symbol=None):
+        display_name = f"{disk_name}-{symbol}" if symbol else disk_name
+
+        while True:
+            try:
+                all_config = self._load_config()
+                disk_config = all_config.get(disk_name, disk_config)
+
+                disk_cfg = disk_config.get("disk", {})
+                check_cfg = disk_config.get("check", {})
+                schedule_cfg = disk_config.get("schedule", {})
+
+                file_path = disk_cfg.get("file_path")
+                file_type = disk_cfg.get("file_type", "mtime")
+                record_pointer = disk_cfg.get("record_pointer", 0)
+                column_to_check = disk_cfg.get("column_to_check", "datetime")
+
+                timezone_offset = check_cfg.get("timezone_offset", 7)
+                allow_delay = check_cfg.get("allow_delay", 60)
+                alert_frequency = check_cfg.get("alert_frequency", 60)
+                check_frequency = check_cfg.get("check_frequency", 10)
+
+                if symbol and file_path:
+                    file_path = file_path.format(symbol=symbol)
+
+                is_within_schedule = TimeValidator.is_within_valid_schedule(
+                    schedule_cfg, timezone_offset
+                )
+                if not is_within_schedule:
+                    if not self.outside_schedule_logged.get(display_name, False):
+                        self.logger_disk.info(
+                            f"Ngoài lịch kiểm tra cho {display_name}, tạm dừng..."
+                        )
+                        self.outside_schedule_logged[display_name] = True
+                    await asyncio.sleep(60)
+                    continue
+                else:
+                    if self.outside_schedule_logged.get(display_name, False):
+                        self.logger_disk.info(
+                            f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
+                        )
+                        self.outside_schedule_logged[display_name] = False
+
+                # read file
+                try:
+                    if file_type in ("json", "csv", "txt"):
+                        file_datetime = self._read_datetime_from_file(
+                            file_path, file_type, record_pointer, column_to_check
+                        )
+                        if timezone_offset != 7:
+                            file_datetime = ConvertDatetimeUtil.convert_utc_to_local(
+                                file_datetime, timezone_offset=7 - timezone_offset
+                            )
+                    else:
+                        path = Path(file_path)
+                        if not path.exists():
+                            raise FileNotFoundError(f"Không tìm thấy file: {file_path}")
+                        ts = path.stat().st_mtime
+                        file_datetime = datetime.fromtimestamp(ts)
+
+                    disk_error = False
+                    error_message = "File không cập nhật"
+
+                except FileNotFoundError as e:
+                    disk_error = True
+                    error_message = str(e)
+                    self.logger_disk.error(
+                        f"Lỗi Disk: {error_message} cho {display_name}"
+                    )
+                except (ValueError, KeyError, json.JSONDecodeError) as e:
+                    disk_error = True
+                    error_message = f"Lỗi đọc file - {str(e)}"
+                    self.logger_disk.error(
+                        f"Lỗi Disk: {error_message} cho {display_name}"
+                    )
+                except Exception as e:
+                    disk_error = True
+                    error_message = str(e)
+                    self.logger_disk.error(
+                        f"Lỗi Disk: {error_message} cho {display_name}"
+                    )
+
+                if disk_error:
+                    current_time = datetime.now()
+                    last_alert = self.last_alert_times.get(display_name)
+                    should_send = False
+                    if last_alert is None:
+                        should_send = True
+                    else:
+                        if (
+                            current_time - last_alert
+                        ).total_seconds() >= alert_frequency:
+                            should_send = True
+
+                    if should_send:
+                        source_info = {"type": "DISK", "file_path": file_path}
+                        self.platform_util.send_alert(
+                            api_name=disk_name,
+                            symbol=symbol,
+                            overdue_seconds=0,
+                            allow_delay=allow_delay,
+                            check_frequency=check_frequency,
+                            alert_frequency=alert_frequency,
+                            alert_level="error",
+                            error_message=error_message,
+                            error_type="DISK",
+                            source_info=source_info,
+                        )
+                        self.last_alert_times[display_name] = datetime.now()
+
+                    await asyncio.sleep(check_frequency)
+                    continue
+
+                # freshness check
+                is_fresh, overdue_seconds = DataValidator.is_data_fresh(
+                    file_datetime, allow_delay
+                )
+                data_timestamp = file_datetime.isoformat()
+
+                if is_fresh:
+                    last_seen = self.tracker.last_seen_timestamps.get(display_name)
+                    if last_seen is None or last_seen != data_timestamp:
+                        self.logger_disk.info(f"Có dữ liệu mới cho {display_name}")
+                        self.tracker.last_seen_timestamps[display_name] = data_timestamp
+
+                    # reset state
+                    self.tracker.reset_fresh_data(display_name)
+                    await asyncio.sleep(check_frequency)
+                    continue
+
+                # stale
+                time_str = DataValidator.format_time_overdue(
+                    overdue_seconds, allow_delay
+                )
+
+                self.logger_disk.warning(
+                    f"CẢNH BÁO: File quá hạn {time_str} cho {display_name}"
+                )
+
+                if self.tracker.should_send_alert(display_name, alert_frequency):
+                    source_info = {"type": "DISK", "file_path": file_path}
+                    self.platform_util.send_alert(
+                        api_name=disk_name,
+                        symbol=symbol,
+                        overdue_seconds=overdue_seconds,
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="warning",
+                        error_message="File không cập nhật",
+                        source_info=source_info,
+                    )
+                    self.tracker.record_alert_sent(display_name)
+
+                await asyncio.sleep(check_frequency)
+
+            except Exception as e:
+                error_message = f"Lỗi không xác định: {str(e)}"
+                self.logger_disk.error(
+                    f"CRITICAL ERROR trong task {display_name}: {error_message}",
+                    exc_info=True,
+                )
+
+                current_time = datetime.now()
+                last_alert = self.last_alert_times.get(display_name)
+                should_send = (
+                    last_alert is None
+                    or (current_time - last_alert).total_seconds() >= alert_frequency
+                )
+                if should_send:
+                    source_info = {"type": "DISK", "file_path": file_path}
+                    self.platform_util.send_alert(
+                        api_name=disk_name,
+                        symbol=symbol,
+                        overdue_seconds=0,
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="error",
+                        error_message=error_message,
+                        error_type="SYSTEM",
+                        source_info=source_info,
+                    )
+                    self.last_alert_times[display_name] = datetime.now()
+
+                await asyncio.sleep(check_frequency)
+
+    async def run_disk_tasks(self):
+        running_tasks = {}
+        while True:
+            config_disk = self._load_config()
+            expected_items = set()
+            for disk_name, disk_config in config_disk.items():
+                symbols_cfg = disk_config.get("symbols", {})
+                if symbols_cfg.get("auto_sync"):
+                    pass
+                symbols_list = symbols_cfg.get("list", [])
+                if symbols_list:
+                    for symbol in symbols_list:
+                        expected_items.add(f"{disk_name}-{symbol}")
+                else:
+                    expected_items.add(disk_name)
+
+            current_items = set(running_tasks.keys())
+            new_items = expected_items - current_items
+            removed_items = current_items - expected_items
+
+            for item_name in removed_items:
+                if item_name in running_tasks:
+                    running_tasks[item_name].cancel()
+                    del running_tasks[item_name]
+                    self.logger_disk.info(f"Đã dừng task cho {item_name}")
+
+            for disk_name, disk_config in config_disk.items():
+                symbols_cfg = disk_config.get("symbols", {})
+                symbols_list = symbols_cfg.get("list", [])
+                if symbols_list:
+                    for symbol in symbols_list:
+                        display_name = f"{disk_name}-{symbol}"
+                        if display_name in new_items:
+                            task = asyncio.create_task(
+                                self.check_data_disk(disk_name, disk_config, symbol)
+                            )
+                            running_tasks[display_name] = task
+                            self.logger_disk.info(
+                                f"Đã start task mới cho {display_name}"
+                            )
+                else:
+                    if disk_name in new_items:
+                        task = asyncio.create_task(
+                            self.check_data_disk(disk_name, disk_config, None)
+                        )
+                        running_tasks[disk_name] = task
+                        self.logger_disk.info(f"Đã start task mới cho {disk_name}")
+
+            await asyncio.sleep(10)
+
+
+import asyncio
+from datetime import datetime
+from pathlib import Path
+import json
+import csv
+
+from utils.convert_datetime_util import ConvertDatetimeUtil
+from logic_check.time_validator import TimeValidator
+from logic_check.data_validator import DataValidator
+from utils.alert_tracker_util import AlertTracker
+
+from configs.logging_config import LoggerConfig
+from utils.task_manager_util import TaskManager
+from utils.load_config_util import LoadConfigUtil
+from utils.platform_util.platform_manager import PlatformManager
+
+
+class CheckDisk:
     """Class kiểm tra freshness của file trên disk bằng cách đọc nội dung hoặc mtime"""
 
     def __init__(self):
@@ -167,7 +483,7 @@ class CheckDisk:
                 allow_delay = check_cfg.get("allow_delay", 60)
                 alert_frequency = check_cfg.get("alert_frequency", 60)
                 check_frequency = check_cfg.get("check_frequency", 10)
-                max_stale_seconds = check_cfg.get("max_stale_seconds", None)
+                # Note: max_stale_seconds removed — always use alert_frequency behaviour
 
                 valid_schedule = schedule_cfg
 
@@ -282,228 +598,7 @@ class CheckDisk:
                         )
                         self.last_alert_times[display_name] = current_time
 
-                    await asyncio.sleep(check_frequency)
-                    continue
-
-                # Kiểm tra file_datetime fresh
-                is_fresh, overdue_seconds = DataValidator.is_data_fresh(
-                    file_datetime, allow_delay
-                )
-
-                current_time = datetime.now()
-                current_date = current_time.strftime("%Y-%m-%d")
-
-                # ===== EARLY CHECK: Low-activity symbol - chỉ log, không gửi alert =====
-                if display_name in self.low_activity_symbols:
-                    if is_fresh:
-                        self.logger_disk.info(
-                            f"[LOW-ACTIVITY] {display_name} có data mới nhưng vẫn được đánh dấu low-activity, không gửi alert"
-                        )
-                    else:
-                        self.logger_disk.debug(
-                            f"[LOW-ACTIVITY] {display_name} không có data mới, skip alert"
-                        )
-                    await asyncio.sleep(check_frequency)
-                    continue
-
-                # ===== CASE 1: Data FRESH - Reset tất cả tracking =====
-                if is_fresh:
-                    if display_name in self.max_stale_exceeded:
-                        self.logger_disk.info(
-                            f"{display_name} có data mới, reset max_stale_exceeded tracking"
-                        )
-                        del self.max_stale_exceeded[display_name]
-
-                    if display_name in self.last_alert_times:
-                        del self.last_alert_times[display_name]
-
-                    if display_name in self.first_stale_times:
-                        del self.first_stale_times[display_name]
-
-                    if display_name in self.consecutive_stale_days:
-                        self.logger_disk.info(
-                            f"{display_name} có data mới, reset consecutive_stale_days"
-                        )
-                        del self.consecutive_stale_days[display_name]
-
-                    self.logger_disk.info(
-                        f"Kiểm tra disk {display_name} - Có dữ liệu mới"
-                    )
-                    await asyncio.sleep(check_frequency)
-                    continue
-
-                # ===== CASE 2: Data STALE - Xử lý phức tạp =====
-                time_str = DataValidator.format_time_overdue(
-                    overdue_seconds, allow_delay
-                )
-
-                if display_name not in self.first_stale_times:
-                    self.first_stale_times[display_name] = current_time
-
-                latest_data_date = file_datetime.strftime("%Y-%m-%d")
-                is_data_from_today = latest_data_date == current_date
-
-                total_stale_seconds = overdue_seconds + allow_delay
-                exceeds_max_stale = (
-                    max_stale_seconds is not None
-                    and total_stale_seconds > max_stale_seconds
-                )
-
-                # ===== CASE 2A: Vượt max_stale_seconds =====
-                if exceeds_max_stale:
-                    # Lấy timestamp của data hiện tại
-                    current_data_timestamp = file_datetime.isoformat()
-                    last_seen_timestamp = self.last_seen_timestamps.get(display_name)
-
-                    # Kiểm tra xem có data mới không (timestamp thay đổi)
-                    has_new_data = (
-                        last_seen_timestamp is None
-                        or current_data_timestamp != last_seen_timestamp
-                    )
-
-                    if has_new_data:
-                        # Cập nhật timestamp đã thấy
-                        self.last_seen_timestamps[display_name] = current_data_timestamp
-
-                        # Chỉ gửi alert nếu chưa từng gửi (lần đầu vượt max_stale)
-                        if display_name not in self.max_stale_exceeded:
-                            self.max_stale_exceeded[display_name] = current_time
-
-                            hours = int(total_stale_seconds // 3600)
-                            minutes = int((total_stale_seconds % 3600) // 60)
-                            seconds = int(total_stale_seconds % 60)
-
-                            max_hours = int(max_stale_seconds // 3600)
-                            max_minutes = int((max_stale_seconds % 3600) // 60)
-                            max_seconds = int(max_stale_seconds % 60)
-
-                            self.logger_disk.warning(
-                                f"Data của {display_name} đã cũ {hours} giờ {minutes} phút {seconds} giây "
-                                f"(vượt ngưỡng {max_hours} giờ {max_minutes} phút {max_seconds} giây). "
-                                f"Gửi alert cuối cùng, sau đó chỉ log khi có data mới."
-                            )
-
-                            status_message = f"Data quá cũ (vượt {max_hours} giờ {max_minutes} phút {max_seconds} giây), không có data mới, dừng gửi thông báo"
-
-                            source_info = {"type": "DISK", "file_path": file_path}
-
-                            self.platform_util.send_alert(
-                                api_name=disk_name,
-                                symbol=symbol,
-                                overdue_seconds=overdue_seconds,
-                                allow_delay=allow_delay,
-                                check_frequency=check_frequency,
-                                alert_frequency=alert_frequency,
-                                alert_level="warning",
-                                error_message="File không cập nhật",
-                                source_info=source_info,
-                                status_message=status_message,
-                            )
-                            self.last_alert_times[display_name] = current_time
-                        else:
-                            # Data vẫn cũ nhưng có cập nhật mới (timestamp khác) - log
-                            self.logger_disk.info(
-                                f"[MAX_STALE] {display_name} có data mới nhưng vẫn quá hạn ({int(total_stale_seconds/3600)} giờ), chỉ log"
-                            )
-                    else:
-                        # Không có data mới (timestamp không thay đổi) - chỉ log, không gửi alert
-                        self.logger_disk.debug(
-                            f"[SILENT MODE] {display_name} vẫn không có data mới, chỉ log (không gửi alert)"
-                        )
-
-                    # Track consecutive stale days cho low-activity detection
-                    last_check = self.consecutive_stale_days.get(display_name)
-                    if last_check is None:
-                        self.consecutive_stale_days[display_name] = (current_date, 1)
-                    else:
-                        last_date, count = last_check
-                        if last_date != current_date:
-                            new_count = count + 1
-                            self.consecutive_stale_days[display_name] = (
-                                current_date,
-                                new_count,
-                            )
-
-                            if new_count >= 2:
-                                self.low_activity_symbols.add(display_name)
-                                self.logger_disk.warning(
-                                    f"[LOW-ACTIVITY DETECTED] {display_name} đã {new_count} ngày liên tiếp không có data. "
-                                    f"Đánh dấu là giao dịch thấp, dừng gửi alert vĩnh viễn."
-                                )
-
-                # ===== CASE 2B: Chưa vượt max_stale - Alert bình thường =====
-                else:
-                    stale_count = len(self.first_stale_times)
-                    total_files = max(stale_count, 1)
-
-                    is_suspected_holiday = (not is_data_from_today) and (
-                        stale_count >= max(2, int(total_files * 0.5))
-                    )
-
-                    self.logger_disk.warning(
-                        f"CẢNH BÁO: File quá hạn {time_str} cho {display_name}"
-                        f"{' (Nghi ngờ ngày lễ)' if is_suspected_holiday else ''}"
-                    )
-
-                    last_alert = self.last_alert_times.get(display_name)
-                    should_send_alert = False
-
-                    if last_alert is None:
-                        should_send_alert = True
-                    else:
-                        time_since_last_alert = (
-                            current_time - last_alert
-                        ).total_seconds()
-                        if time_since_last_alert >= alert_frequency:
-                            should_send_alert = True
-
-                    if should_send_alert:
-                        if is_suspected_holiday:
-                            if self.last_holiday_alert_date != current_date:
-                                context_message = (
-                                    f"Nghi ngờ ngày nghỉ lễ (có {stale_count}/{total_files} file đang thiếu data). "
-                                    f"Nếu đúng là ngày lễ, vui lòng bỏ qua cảnh báo này."
-                                )
-
-                                source_info = {"type": "DISK", "file_path": file_path}
-
-                                self.platform_util.send_alert(
-                                    api_name=disk_name,
-                                    symbol=symbol,
-                                    overdue_seconds=overdue_seconds,
-                                    allow_delay=allow_delay,
-                                    check_frequency=check_frequency,
-                                    alert_frequency=alert_frequency,
-                                    alert_level="warning",
-                                    error_message=context_message,
-                                    source_info=source_info,
-                                )
-                                self.last_alert_times[display_name] = current_time
-                                self.last_holiday_alert_date = current_date
-                                self.logger_disk.info(
-                                    f"Đã gửi alert ngày lễ cho {display_name}"
-                                )
-                            else:
-                                self.logger_disk.info(
-                                    f"Đã gửi alert ngày lễ hôm nay, skip để tránh spam"
-                                )
-                        else:
-                            source_info = {"type": "DISK", "file_path": file_path}
-
-                            self.platform_util.send_alert(
-                                api_name=disk_name,
-                                symbol=symbol,
-                                overdue_seconds=overdue_seconds,
-                                allow_delay=allow_delay,
-                                check_frequency=check_frequency,
-                                alert_frequency=alert_frequency,
-                                alert_level="warning",
-                                error_message="File không cập nhật",
-                                source_info=source_info,
-                            )
-                            self.last_alert_times[display_name] = current_time
-
-                # Sleep theo check_frequency
+                # Duplicate/garbled block removed; main fresh/stale handling is above
                 await asyncio.sleep(check_frequency)
 
             except Exception as e:

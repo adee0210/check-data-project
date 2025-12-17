@@ -161,23 +161,8 @@ class DiscordNotifier(BasePlatformNotifier):
         Returns:
             True nếu gửi thành công
         """
-        if not self.is_enabled():
-            return False
-
-        webhook_url = self.config["webhooks_url"]
-
-        embed = {
-            "title": "🟡 NGHI NGỜ NGÀY LỄ",
-            "description": message,
-            "color": 0xFFFF00,  # Yellow
-            "footer": {"text": "Data Monitoring System"},
-        }
-
-        try:
-            response = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
-
-            return response.status_code == 204
-
-        except Exception as e:
-            self.logger.error(f"Lỗi gửi holiday alert đến Discord: {str(e)}")
-            return False
+        # Holiday alerts disabled — method retained for compatibility
+        self.logger.debug(
+            "Holiday alert disabled in Discord notifier; ignoring request"
+        )
+        return False
