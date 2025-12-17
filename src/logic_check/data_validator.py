@@ -12,15 +12,15 @@ class DataValidator:
         Logic:
         - Nếu data_datetime chỉ có ngày (00:00:00): So sánh theo ngày
           Ví dụ: "2025-12-04" với allow_delay=86400 (1 ngày)
-                  → Fresh nếu hôm nay là 2025-12-04 hoặc 2025-12-05
-                  → Stale nếu hôm nay là 2025-12-06 trở đi
+                  → Mới nếu hôm nay là 2025-12-04 hoặc 2025-12-05
+                  → Quá hạn nếu hôm nay là 2025-12-06 trở đi
 
         - Nếu data_datetime có cả giờ phút: So sánh chính xác theo giây
           Ví dụ: "2025-12-04 14:30:00" với allow_delay=60 (1 phút)
-                  → Fresh nếu hiện tại <= 2025-12-04 14:31:00
-                  → Stale nếu hiện tại > 2025-12-04 14:31:00
+                  → Mới nếu hiện tại <= 2025-12-04 14:31:00
+                  → Quá hạn nếu hiện tại > 2025-12-04 14:31:00
 
-        Returns:
+        Trả về:
             tuple: (is_fresh, overdue_seconds)
         """
         current_time = datetime.now()
@@ -65,8 +65,6 @@ class DataValidator:
     @staticmethod
     def format_time_overdue(seconds, allow_delay_seconds):
         """
-        Chuyển đổi số giây quá hạn sang định dạng dễ đọc
-
         - Nếu > 1 ngày: Hiển thị theo ngày
         - Nếu <= 1 ngày: Hiển thị theo giờ phút giây
         """
@@ -101,14 +99,14 @@ class DataValidator:
     @staticmethod
     def get_active_start_time(time_ranges, current_time):
         """
-        Get the start time of the active range that the current time belongs to.
+        Lấy thời gian bắt đầu của khoảng thời gian hoạt động mà thời gian hiện tại thuộc về.
 
-        Args:
-            time_ranges (list): List of time ranges in "HH:MM:SS-HH:MM:SS" format.
-            current_time (datetime): The current time.
+        Tham số:
+            time_ranges (list): Danh sách các khoảng thời gian dạng "HH:MM:SS-HH:MM:SS".
+            current_time (datetime): Thời gian hiện tại.
 
-        Returns:
-            datetime: The start time of the active range, or None if outside all ranges.
+        Trả về:
+            datetime: Thời gian bắt đầu của khoảng hoạt động, hoặc None nếu ngoài tất cả các khoảng.
         """
         for time_range in time_ranges:
             start_str, end_str = time_range.split("-")
@@ -129,15 +127,15 @@ class DataValidator:
     @staticmethod
     def calculate_adjusted_overdue(latest_time, current_time, time_ranges):
         """
-        Calculate the adjusted overdue time, excluding inactive periods.
+        Tính thời gian quá hạn đã điều chỉnh, loại trừ các khoảng thời gian không hoạt động.
 
-        Args:
-            latest_time (datetime): The timestamp of the latest data.
-            current_time (datetime): The current time.
-            time_ranges (list): List of active time ranges.
+        Tham số:
+            latest_time (datetime): Thời gian của dữ liệu mới nhất.
+            current_time (datetime): Thời gian hiện tại.
+            time_ranges (list): Danh sách các khoảng thời gian hoạt động.
 
-        Returns:
-            int: Adjusted overdue seconds.
+        Trả về:
+            int: Số giây quá hạn đã điều chỉnh.
         """
         adjusted_overdue = 0
         for time_range in time_ranges:

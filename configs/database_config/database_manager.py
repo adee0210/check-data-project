@@ -12,11 +12,9 @@ class DatabaseManager:
     """
     Database Manager - Quản lý tất cả database connections
 
-    Tính năng:
     - Connection pooling (tái sử dụng connections)
     - Tự động reload config từ common_config.json
     - Factory pattern để tạo connectors
-    - Dễ dàng mở rộng với database types mới
 
     Sử dụng:
         manager = DatabaseManager()
@@ -32,7 +30,7 @@ class DatabaseManager:
     CONNECTOR_REGISTRY = {
         "mongodb": MongoDBConnector,
         "postgresql": PostgreSQLConnector,
-        # Dễ dàng thêm: "mysql": MySQLConnector,
+        # Thêm: "mysql", hoặc các cái database khác ở đây : MySQLConnector,
     }
 
     def __init__(self):
