@@ -11,8 +11,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
 
     Hỗ trợ:
     - Connection pooling
-    - Query tối ưu với MAX/MIN aggregations
-    - Parameterized queries (ngăn chặn SQL injection)
     - Auto-reconnect khi connection bị đóng
     """
 
@@ -22,8 +20,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
     def is_connected(self) -> bool:
         """
         Check xem PostgreSQL connection còn active không
-
-        Override để check connection status thực tế, không chỉ check None
 
         Returns:
             True nếu connected và active, False nếu không
@@ -94,8 +90,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
     def query(self, config: Dict[str, Any], symbol: Optional[str] = None) -> datetime:
         """
         Query PostgreSQL để lấy timestamp mới nhất/cũ nhất
-
-        Uses MAX/MIN aggregation instead of ORDER BY for better performance
 
         Args:
             config: Dict chứa:

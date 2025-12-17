@@ -9,9 +9,7 @@ class MongoDBConnector(BaseDatabaseConnector):
     """
     MongoDB connector implementation
 
-    Hỗ trợ:
     - Connection pooling
-    - Query tối ưu với projection
     - Authentication
     """
 

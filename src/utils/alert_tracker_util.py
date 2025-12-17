@@ -262,8 +262,6 @@ class AlertTracker:
         if display_name in self.empty_data_tracking:
             del self.empty_data_tracking[display_name]
 
-    # Holiday detection removed by request: alerts rely only on alert_frequency
-
     def get_stale_count(self) -> int:
         """
         Lấy số lượng items đang stale

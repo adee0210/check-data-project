@@ -78,7 +78,6 @@ class CheckAPI:
             allow_delay = check_cfg.get("allow_delay", 60)
             alert_frequency = check_cfg.get("alert_frequency", 60)
             check_frequency = check_cfg.get("check_frequency", 10)
-            # Note: max_stale_seconds removed — always use alert_frequency behaviour
 
             valid_schedule = schedule_cfg
 
