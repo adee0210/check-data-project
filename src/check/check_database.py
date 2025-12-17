@@ -59,16 +59,6 @@ class CheckDatabase:
         }
 
     def _get_active_start_time(self, time_ranges, current_time):
-        """
-        Get the start time of the active range that the current time belongs to.
-
-        Args:
-            time_ranges (list): List of time ranges in "HH:MM:SS-HH:MM:SS" format.
-            current_time (datetime): The current time.
-
-        Returns:
-            datetime: The start time of the active range, or None if outside all ranges.
-        """
         for time_range in time_ranges:
             start_str, end_str = time_range.split("-")
             start_time = current_time.replace(
