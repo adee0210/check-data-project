@@ -335,7 +335,6 @@ class CheckAPI:
             current_time = datetime.now()
             current_date = current_time.strftime("%Y-%m-%d")
 
-            # ===== CASE 1: Data FRESH - Reset tất cả tracking =====
             if is_fresh:
                 # Reset tracking
                 self.tracker.reset_fresh_data(display_name)
@@ -344,7 +343,6 @@ class CheckAPI:
                 await asyncio.sleep(check_frequency)
                 continue
 
-            # ===== CASE 2: Data STALE - Xử lý phức tạp =====
             time_str = DataValidator.format_time_overdue(overdue_seconds, allow_delay)
 
             # Lấy ngày của data mới nhất
