@@ -36,12 +36,6 @@ class DataValidator:
             and data_datetime.second == 0
         )
 
-        # Debug logging
-        logger.info(
-            f"[DEBUG] data_datetime: {data_datetime}, allow_delay: {allow_delay}, current_time: {current_time}"
-        )
-        logger.info(f"[DEBUG] is_date_only: {is_date_only}")
-
         if is_date_only:
             # So sánh theo ngày - sử dụng date() để bỏ phần giờ
             data_date = data_datetime.date()
@@ -63,12 +57,6 @@ class DataValidator:
         else:
             # So sánh theo giây chính xác (logic cũ cho datetime đầy đủ)
             time_threshold = current_time - timedelta(seconds=allow_delay)
-
-            # Debug logging
-            logger.info(
-                f"[DEBUG] time_threshold: {time_threshold}, data_datetime: {data_datetime}"
-            )
-            logger.info(f"[DEBUG] Comparison result: {data_datetime >= time_threshold}")
 
             if data_datetime >= time_threshold:
                 return True, 0
