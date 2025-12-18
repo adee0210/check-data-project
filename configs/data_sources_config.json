@@ -89,20 +89,17 @@
             "auto_sync": false,
             "values": [
                 "E1VFVN30",
-                "FUEIP100",
-                "FUEMAV30",
                 "FUESSV30",
-                "FUESSV50",
-                "FUESSVFL",
                 "FUEVFVND",
-                "FUEVN100"
+                "FUEVN100",
+                "FUESSV50"
             ],
             "column": "symbol"
         },
         "check": {
             "timezone_offset": 0,
             "allow_delay": 3600,
-            "check_frequency": 10,
+            "check_frequency": 60,
             "alert_frequency": 300
         },
         "schedule": {

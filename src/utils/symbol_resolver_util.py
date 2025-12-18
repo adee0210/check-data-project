@@ -14,13 +14,6 @@ class SymbolResolverUtil:
     # Singleton DatabaseConfig instance - reuse across all queries
     _db_connector = None
 
-    # Cache directory
-    CACHE_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cache"
-    )
-
-    CACHE_EXPIRY_HOURS = 24
-
     @staticmethod
     def _get_db_connector():
         """Get or create DatabaseManager singleton instance"""
@@ -29,77 +22,10 @@ class SymbolResolverUtil:
         return SymbolResolverUtil._db_connector
 
     @staticmethod
-    def _get_cache_file_path(api_name):
-        """Tạo đường dẫn cache file cho api_name"""
-        os.makedirs(SymbolResolverUtil.CACHE_DIR, exist_ok=True)
-        return os.path.join(SymbolResolverUtil.CACHE_DIR, f"symbols_{api_name}.json")
-
-    @staticmethod
-    def _load_symbols_from_cache(api_name):
-        """
-        Load symbols từ cache file nếu còn valid
-
-        Returns:
-            list hoặc None nếu cache không tồn tại hoặc expired
-        """
-        cache_file = SymbolResolverUtil._get_cache_file_path(api_name)
-
-        if not os.path.exists(cache_file):
-            return None
-
-        try:
-            with open(cache_file, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
-
-            # Kiểm tra expiry time
-            cached_time = datetime.fromisoformat(cache_data.get("cached_at", ""))
-            expiry_time = cached_time + timedelta(
-                hours=SymbolResolverUtil.CACHE_EXPIRY_HOURS
-            )
-
-            if datetime.now() > expiry_time:
-                SymbolResolverUtil.logger.info(
-                    f"[{api_name}] Cache đã hết hạn (cached: {cached_time}, expiry: {expiry_time})"
-                )
-                return None
-
-            symbols = cache_data.get("symbols", [])
-            SymbolResolverUtil.logger.info(
-                f"[{api_name}] Đọc {len(symbols)} symbols từ cache (cached: {cached_time})"
-            )
-            return symbols
-
-        except Exception as e:
-            SymbolResolverUtil.logger.warning(f"[{api_name}] Lỗi đọc cache: {e}")
-            return None
-
-    @staticmethod
-    def _save_symbols_to_cache(api_name, symbols):
-        """Lưu symbols vào cache file"""
-        cache_file = SymbolResolverUtil._get_cache_file_path(api_name)
-
-        try:
-            cache_data = {
-                "api_name": api_name,
-                "cached_at": datetime.now().isoformat(),
-                "symbols": symbols,
-                "count": len(symbols),
-            }
-
-            with open(cache_file, "w", encoding="utf-8") as f:
-                json.dump(cache_data, f, indent=2, ensure_ascii=False)
-
-            SymbolResolverUtil.logger.info(
-                f"[{api_name}] Đã cache {len(symbols)} symbols vào {cache_file}"
-            )
-        except Exception as e:
-            SymbolResolverUtil.logger.error(f"[{api_name}] Lỗi ghi cache: {e}")
-
-    @staticmethod
     def get_symbols_from_database(api_name):
         """
         Lấy danh sách symbols từ database config nếu có cùng tên
-        Sử dụng cache để tránh query DISTINCT liên tục
+        Luôn query từ database, không dùng cache
 
         Args:
             api_name: Tên API config (vd: "cmc", "etf_candlestick")
@@ -108,15 +34,7 @@ class SymbolResolverUtil:
             list: Danh sách symbols hoặc None nếu không tìm thấy
         """
         try:
-            # Bước 1: Kiểm tra cache trước
-            cached_symbols = SymbolResolverUtil._load_symbols_from_cache(api_name)
-            if cached_symbols is not None:
-                return cached_symbols
-
-            # Bước 2: Nếu không có cache, query từ database
-            SymbolResolverUtil.logger.info(
-                f"[{api_name}] Cache không tồn tại hoặc đã hết hạn, query từ database..."
-            )
+            SymbolResolverUtil.logger.info(f"[{api_name}] Query symbols từ database...")
 
             # Load database config từ file chung
             db_config_all = LoadConfigUtil.load_json_to_variable(
@@ -157,10 +75,6 @@ class SymbolResolverUtil:
                 )
             else:
                 return None
-
-            # Bước 3: Lưu kết quả vào cache
-            if symbols:
-                SymbolResolverUtil._save_symbols_to_cache(api_name, symbols)
 
             return symbols
 

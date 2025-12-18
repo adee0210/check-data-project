@@ -22,10 +22,6 @@ class CheckAPI:
         self.task_manager_api = TaskManager()
         self.platform_util = PlatformManager()
 
-        # Symbols cache ở class level để persist qua các reload
-        # Format: {api_name: symbols_list}
-        self.symbols_cache = {}
-
         # Sử dụng AlertTracker để quản lý tất cả tracking
         self.tracker = AlertTracker()
 
@@ -246,17 +242,6 @@ class CheckAPI:
                     error_type = "API_WARNING"
                     api_error = True
 
-                    # Track empty data - chỉ gửi alert lần đầu, sau đó silent ngay
-                    is_silent, duration = self.tracker.track_empty_data(
-                        display_name, silent_threshold_seconds=0
-                    )
-
-                    if is_silent and duration is not None:
-                        self.logger_api.info(
-                            f"[EMPTY_DATA] {display_name} đã gửi alert lần đầu. "
-                            f"Chuyển silent mode - chỉ log, không gửi alert nữa."
-                        )
-
                     self.logger_api.warning(
                         f"Cảnh báo API: {error_message} cho {display_name}"
                     )
@@ -334,17 +319,18 @@ class CheckAPI:
                 dt_record_pointer_data_with_column_to_check, allow_delay
             )
 
-            # Calculate adjusted overdue time using DataValidator
+            # Tính adjusted overdue nếu có time_ranges
             active_start_time = DataValidator.get_active_start_time(
-                schedule_cfg.get("time_ranges", []), datetime.now()
+                schedule_cfg.get("time_ranges") or [], datetime.now()
             )
 
-            if active_start_time:
+            if active_start_time and schedule_cfg.get("time_ranges"):
                 overdue_seconds = DataValidator.calculate_adjusted_overdue(
-                    datetime.now(), datetime.now(), schedule_cfg.get("time_ranges", [])
+                    dt_record_pointer_data_with_column_to_check,
+                    datetime.now(),
+                    schedule_cfg.get("time_ranges", []),
                 )
-            else:
-                overdue_seconds = 0  # Outside active ranges
+                is_fresh = overdue_seconds <= allow_delay
 
             current_time = datetime.now()
             current_date = current_time.strftime("%Y-%m-%d")
@@ -408,15 +394,8 @@ class CheckAPI:
             # Tạo list các item cần check
             expected_items = set()
             for api_name, api_config in config_api.items():
-                # Chỉ resolve symbols khi chưa có trong cache hoặc config thay đổi
-                # SymbolResolverUtil đã có cache 24h cho DISTINCT query
-                if api_name not in self.symbols_cache:
-                    symbols = SymbolResolverUtil.resolve_api_symbols(
-                        api_name, api_config
-                    )
-                    self.symbols_cache[api_name] = symbols
-                else:
-                    symbols = self.symbols_cache[api_name]
+                # Resolve symbols mỗi lần để luôn lấy từ database
+                symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
 
                 if symbols is None:
                     # API không cần symbols (ví dụ: gold-data)
@@ -441,16 +420,10 @@ class CheckAPI:
                     del running_tasks[item_name]
                     self.logger_api.info(f"Đã dừng task cho {item_name}")
 
-                    # Cleanup symbols cache cho API đã bị remove
-                    api_name = item_name.split("-")[0]
-                    if api_name not in config_api and api_name in self.symbols_cache:
-                        del self.symbols_cache[api_name]
-                        self.logger_api.info(f"Đã xóa symbols cache cho {api_name}")
-
-            # Start task mới - dùng symbols từ class cache
+            # Start task mới - resolve symbols mỗi lần
             for api_name, api_config in config_api.items():
-                # Lấy symbols từ class cache (đã resolve ở trên)
-                symbols = self.symbols_cache.get(api_name)
+                # Resolve symbols mỗi lần để luôn lấy từ database
+                symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
 
                 if symbols is None:
                     # API không cần symbols

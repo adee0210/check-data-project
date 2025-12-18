@@ -1,4 +1,8 @@
 from datetime import datetime, timedelta
+import logging
+
+
+logger = logging.getLogger("CheckAPI")
 
 
 class DataValidator:
@@ -32,6 +36,12 @@ class DataValidator:
             and data_datetime.second == 0
         )
 
+        # Debug logging
+        logger.info(
+            f"[DEBUG] data_datetime: {data_datetime}, allow_delay: {allow_delay}, current_time: {current_time}"
+        )
+        logger.info(f"[DEBUG] is_date_only: {is_date_only}")
+
         if is_date_only:
             # So sánh theo ngày - sử dụng date() để bỏ phần giờ
             data_date = data_datetime.date()
@@ -53,6 +63,12 @@ class DataValidator:
         else:
             # So sánh theo giây chính xác (logic cũ cho datetime đầy đủ)
             time_threshold = current_time - timedelta(seconds=allow_delay)
+
+            # Debug logging
+            logger.info(
+                f"[DEBUG] time_threshold: {time_threshold}, data_datetime: {data_datetime}"
+            )
+            logger.info(f"[DEBUG] Comparison result: {data_datetime >= time_threshold}")
 
             if data_datetime >= time_threshold:
                 return True, 0
@@ -108,6 +124,9 @@ class DataValidator:
         Trả về:
             datetime: Thời gian bắt đầu của khoảng hoạt động, hoặc None nếu ngoài tất cả các khoảng.
         """
+        if time_ranges is None or not time_ranges:
+            return None
+
         for time_range in time_ranges:
             start_str, end_str = time_range.split("-")
             start_time = current_time.replace(
@@ -127,17 +146,20 @@ class DataValidator:
     @staticmethod
     def calculate_adjusted_overdue(latest_time, current_time, time_ranges):
         """
-        Tính thời gian quá hạn đã điều chỉnh, loại trừ các khoảng thời gian không hoạt động.
+        Tính thời gian quá hạn đã điều chỉnh, chỉ tính trong khoảng thời gian hoạt động.
 
         Tham số:
             latest_time (datetime): Thời gian của dữ liệu mới nhất.
             current_time (datetime): Thời gian hiện tại.
-            time_ranges (list): Danh sách các khoảng thời gian hoạt động.
+            time_ranges (list): Danh sách các khoảng thời gian hoạt động dạng "HH:MM:SS-HH:MM:SS".
 
         Trả về:
             int: Số giây quá hạn đã điều chỉnh.
         """
         adjusted_overdue = 0
+        if time_ranges is None or not time_ranges:
+            return 0
+
         for time_range in time_ranges:
             start_str, end_str = time_range.split("-")
             start_time = current_time.replace(
@@ -149,9 +171,12 @@ class DataValidator:
                 hour=int(end_str[:2]), minute=int(end_str[3:5]), second=int(end_str[6:])
             )
 
-            if latest_time < start_time <= current_time:
-                adjusted_overdue += (current_time - start_time).total_seconds()
-            elif start_time <= latest_time < end_time:
-                adjusted_overdue += (current_time - latest_time).total_seconds()
+            # Thời gian bắt đầu tính: max(latest_time, start_time)
+            calc_start = max(latest_time, start_time)
+            # Thời gian kết thúc tính: min(current_time, end_time)
+            calc_end = min(current_time, end_time)
+
+            if calc_start < calc_end:
+                adjusted_overdue += (calc_end - calc_start).total_seconds()
 
         return int(adjusted_overdue)

@@ -51,5 +51,5 @@ class LoggerConfig:
             logger.addHandler(console_handler)
 
         logger.propagate = False
-        logger.setLevel(log_level)
+        logger.setLevel(logging.DEBUG)  # Cập nhật mức log thành DEBUG
         return logger

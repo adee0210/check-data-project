@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("CheckAPI")
 
 
 class TimeValidator:
@@ -79,6 +79,10 @@ class TimeValidator:
             start_str, end_str = hour_range.split("-", 1)
             start_time = _parse_time(start_str)
             end_time = _parse_time(end_str)
+            # Debug logging
+            logger.info(
+                f"[DEBUG] hour_range: {hour_range}, current_time: {current_time}, start_time: {start_time}, end_time: {end_time}"
+            )
             return start_time <= current_time <= end_time
         except (ValueError, AttributeError) as e:
             logger.warning(
@@ -124,6 +128,11 @@ class TimeValidator:
         now = datetime.now(tz)
         current_weekday = now.weekday()  # 0=Monday, 6=Sunday
         current_time = now.time()
+
+        # Debug logging
+        logger.info(
+            f"[DEBUG] valid_schedule: {valid_schedule}, current_time: {current_time}, current_weekday: {current_weekday}"
+        )
 
         # Trường hợp 1: List của nhiều schedules
         if isinstance(valid_schedule, list):

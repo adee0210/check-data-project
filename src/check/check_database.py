@@ -24,9 +24,6 @@ class CheckDatabase:
 
         self.db_connector = DatabaseManager()
 
-        # Symbols cache ở class level để persist qua các reload
-        self.symbols_cache = {}
-
         # Sử dụng AlertTracker để quản lý tất cả tracking
         self.tracker = AlertTracker()
 
@@ -177,6 +174,25 @@ class CheckDatabase:
                     dt_latest_time, allow_delay
                 )
 
+                # Tính adjusted overdue nếu có time_ranges
+                schedule_cfg = db_config.get("schedule", {})
+                active_start_time = DataValidator.get_active_start_time(
+                    schedule_cfg.get("time_ranges") or [] if schedule_cfg else [],
+                    datetime.now(),
+                )
+
+                if (
+                    active_start_time
+                    and schedule_cfg
+                    and schedule_cfg.get("time_ranges")
+                ):
+                    overdue_seconds = DataValidator.calculate_adjusted_overdue(
+                        dt_latest_time,
+                        datetime.now(),
+                        schedule_cfg.get("time_ranges", []),
+                    )
+                    is_fresh = overdue_seconds <= allow_delay
+
                 current_time = datetime.now()
                 current_date = current_time.strftime("%Y-%m-%d")
 
@@ -281,12 +297,8 @@ class CheckDatabase:
             # Tạo list các item cần check
             expected_items = set()
             for db_name, db_config in config_db.items():
-                # Chỉ resolve symbols khi chưa có trong cache
-                if db_name not in self.symbols_cache:
-                    symbols = SymbolResolverUtil.resolve_api_symbols(db_name, db_config)
-                    self.symbols_cache[db_name] = symbols
-                else:
-                    symbols = self.symbols_cache[db_name]
+                # Resolve symbols mỗi lần để luôn lấy từ database
+                symbols = SymbolResolverUtil.resolve_api_symbols(db_name, db_config)
 
                 if symbols is None:
                     # Database không cần symbols
@@ -311,16 +323,13 @@ class CheckDatabase:
                     del running_tasks[item_name]
                     self.logger_db.info(f"Đã dừng task cho {item_name}")
 
-                    # Cleanup symbols cache
+                    # Cleanup
                     db_name = item_name.split("-")[0]
-                    if db_name not in config_db and db_name in self.symbols_cache:
-                        del self.symbols_cache[db_name]
-                        self.logger_db.info(f"Đã xóa symbols cache cho {db_name}")
 
-            # Start task mới - dùng symbols từ class cache
+            # Start task mới - resolve symbols mỗi lần
             for db_name, db_config in config_db.items():
-                # Lấy symbols từ class cache (đã resolve ở trên)
-                symbols = self.symbols_cache.get(db_name)
+                # Resolve symbols mỗi lần để luôn lấy từ database
+                symbols = SymbolResolverUtil.resolve_api_symbols(db_name, db_config)
 
                 if symbols is None:
                     # Database không cần symbols

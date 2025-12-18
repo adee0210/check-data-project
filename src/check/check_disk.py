@@ -281,6 +281,21 @@ class CheckDisk:
                 is_fresh, overdue_seconds = DataValidator.is_data_fresh(
                     file_datetime, allow_delay
                 )
+
+                # Tính adjusted overdue nếu có time_ranges
+                active_start_time = DataValidator.get_active_start_time(
+                    schedule_cfg.get("time_ranges") or [], datetime.now()
+                )
+
+                if active_start_time and schedule_cfg.get("time_ranges"):
+                    overdue_seconds = DataValidator.calculate_adjusted_overdue(
+                        file_datetime,
+                        datetime.now(),
+                        schedule_cfg.get("time_ranges", []),
+                    )
+                    is_fresh = overdue_seconds <= allow_delay
+
+                current_time = datetime.now()
                 data_timestamp = file_datetime.isoformat()
 
                 if is_fresh:

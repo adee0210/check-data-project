@@ -5,10 +5,8 @@ from configs.logging_config import LoggerConfig
 
 
 class LoadConfigUtil:
-    """Utility để load config từ file JSON với caching và auto-reload"""
+    """Utility để load config từ file JSON"""
 
-    _cache = {}
-    _last_modified = {}
     _logger = None
 
     @staticmethod
@@ -37,23 +35,7 @@ class LoadConfigUtil:
 
         file_path = files[0]
 
-        # Kiểm tra file có thay đổi không (để reload)
-        current_mtime = os.path.getmtime(file_path)
-        cache_key = f"{file_path}:{config_type}" if config_type else file_path
-
-        # Check if cache exists and file hasn't changed
-        if cache_key in LoadConfigUtil._cache:
-            if LoadConfigUtil._last_modified.get(cache_key) == current_mtime:
-                # File không thay đổi, dùng cache
-                return LoadConfigUtil._cache[cache_key]
-            else:
-                # File đã thay đổi, log reload
-                logger = LoadConfigUtil._get_logger()
-                logger.info(
-                    f"Phát hiện thay đổi config file: {filename}, đang reload..."
-                )
-
-        # Load file mới hoặc file đã thay đổi
+        # Luôn load từ file
         with open(file=file_path, mode="r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -66,49 +48,12 @@ class LoadConfigUtil:
             # Không có config_type, trả về toàn bộ
             result = data
 
-        # Cache lại
-        LoadConfigUtil._cache[cache_key] = result
-        LoadConfigUtil._last_modified[cache_key] = current_mtime
-
-        # Log first load or reload
-        if current_mtime not in [
-            LoadConfigUtil._last_modified.get(k)
-            for k in LoadConfigUtil._cache.keys()
-            if k != cache_key
-        ]:
-            logger = LoadConfigUtil._get_logger()
-            config_desc = f" [{config_type}]" if config_type else ""
-            logger.info(f"Đã load config: {filename}{config_desc}")
+        # Log load
+        logger = LoadConfigUtil._get_logger()
+        config_desc = f" [{config_type}]" if config_type else ""
+        logger.info(f"Đã load config: {filename}{config_desc}")
 
         return result
-
-    @staticmethod
-    def reload_config(filename, config_type):
-        """
-        Force reload config từ file (bỏ qua cache)
-
-        Args:
-            filename: Tên file JSON
-            config_type: Loại config muốn reload
-
-        Returns:
-            Dict config mới
-        """
-        files = glob.glob(f"**/{filename}", recursive=True)
-        if not files:
-            raise FileNotFoundError(f"Không tìm thấy file: {filename}")
-
-        file_path = files[0]
-        cache_key = f"{file_path}:{config_type}"
-
-        # Xóa cache
-        if cache_key in LoadConfigUtil._cache:
-            del LoadConfigUtil._cache[cache_key]
-        if cache_key in LoadConfigUtil._last_modified:
-            del LoadConfigUtil._last_modified[cache_key]
-
-        # Load lại
-        return LoadConfigUtil.load_json_to_variable(filename, config_type)
 
     @staticmethod
     def get_all_configs(filename):

@@ -90,9 +90,7 @@ class AlertTracker:
         self, display_name: str, silent_threshold_seconds: int = 0
     ) -> Tuple[bool, Optional[int]]:
         """
-        Track empty data warnings và xác định silent mode
-
-        Mặc định (silent_threshold_seconds=0): chỉ gửi alert lần đầu, sau đó silent ngay
+        Track empty data warnings
 
         Args:
             display_name: Tên hiển thị của item
@@ -119,15 +117,8 @@ class AlertTracker:
 
         duration = (current_time - tracking["first_time"]).total_seconds()
 
-        # Nếu đã track (count > 1) và chưa silent → chuyển sang silent
-        if not tracking["silent"]:
-            # Nếu silent_threshold_seconds = 0 → silent ngay sau lần đầu
-            # Nếu > 0 → chỉ silent khi vượt ngưỡng thời gian
-            if silent_threshold_seconds == 0 or duration > silent_threshold_seconds:
-                tracking["silent"] = True
-                return True, int(duration)
-
-        return tracking.get("silent", False), int(duration)
+        # Không còn silent mode - luôn gửi alert
+        return False, int(duration)
 
     def reset_empty_data(self, display_name: str) -> Optional[int]:
         """
