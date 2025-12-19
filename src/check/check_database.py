@@ -218,7 +218,7 @@ class CheckDatabase:
 
                 # Nội dung cảnh báo đồng bộ giữa log và alert
                 warning_message = (
-                    f"CẢNH BÁO: Dữ liệu database quá hạn {time_str} cho {display_name}"
+                    f"Dữ liệu database quá hạn {time_str} cho {display_name}"
                 )
                 self.logger_db.warning(warning_message)
 
