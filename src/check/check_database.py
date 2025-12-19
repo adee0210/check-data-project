@@ -216,9 +216,11 @@ class CheckDatabase:
                 stale_count = self.tracker.get_stale_count()
                 total_dbs = max(stale_count, 1)
 
-                self.logger_db.warning(
+                # Nội dung cảnh báo đồng bộ giữa log và alert
+                warning_message = (
                     f"CẢNH BÁO: Dữ liệu database quá hạn {time_str} cho {display_name}"
                 )
+                self.logger_db.warning(warning_message)
 
                 should_send_alert = self.tracker.should_send_alert(
                     display_name, alert_frequency
@@ -244,7 +246,7 @@ class CheckDatabase:
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
                         alert_level="warning",
-                        error_message="Dữ liệu database không cập nhật",
+                        error_message=warning_message,
                         source_info=source_info,
                     )
                     self.tracker.record_alert_sent(display_name)

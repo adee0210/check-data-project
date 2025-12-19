@@ -89,10 +89,8 @@
             "auto_sync": false,
             "values": [
                 "E1VFVN30",
-                "FUESSV30",
                 "FUEVFVND",
-                "FUEVN100",
-                "FUESSV50"
+                "FUEVN100"
             ],
             "column": "symbol"
         },

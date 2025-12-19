@@ -2,7 +2,7 @@
     "PLATFORM_CONFIG": {
         "discord": {
             "webhooks_url": "https://discord.com/api/webhooks/1450020771450585121/vaAyEWssF72gRv1bemxufWP4dOLdn9KJQ3Yqxadwra3A36d9xBYRr7YBr4UQzavPgV0E",
-            "is_primary": true
+            "is_primary": false
         },
         "telegram": {
             "bot_token": "8557699553:AAHmWW_kk5KUe5KmlIcEp9iCa9U3cK4pNUg",
