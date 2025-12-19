@@ -246,7 +246,7 @@ class CheckDatabase:
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
                         alert_level="warning",
-                        error_message=warning_message,
+                        error_message=f"Dữ liệu database quá hạn {time_str} cho {display_name}",
                         source_info=source_info,
                     )
                     self.tracker.record_alert_sent(display_name)

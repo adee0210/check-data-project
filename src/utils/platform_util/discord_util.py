@@ -114,7 +114,7 @@ class DiscordNotifier(BasePlatformNotifier):
         """
         # Build description với Nội dung + Dữ liệu cũ ở đầu
         description_parts = [
-            f"**Nội dung:** {data['error_message']} - Dữ liệu cũ: {data['total_time_formatted']}",
+            f"**Nội dung:** {data['error_message']}",
             f"**Thời gian:** {data['current_time']}",
         ]
 
