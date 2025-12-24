@@ -110,7 +110,7 @@
         "api": {
             "enable": true,
             "url": "http://192.168.110.164:8010/crypto/etf-candlestick/?symbol={symbol}&day=0",
-            "record_pointer": 0,
+            "record_pointer": -1,
             "column_to_check": "datetime"
         },
         "database": {
