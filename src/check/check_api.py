@@ -226,7 +226,9 @@ class CheckAPI:
                 api_error = False
 
             except requests.exceptions.ConnectionError:
-                error_message = "Không thể kết nối đến server"
+                error_message = (
+                    "Không thể kết nối đến server. Server có thể đã dừng hoặc bị lỗi"
+                )
                 error_type = "API"
                 api_error = True
                 self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
