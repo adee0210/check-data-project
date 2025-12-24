@@ -40,7 +40,7 @@
         "api": {
             "enable": true,
             "url": "http://192.168.110.164:8010/gold-data/?day=0",
-            "record_pointer": 0,
+            "record_pointer": -1,
             "column_to_check": "datetime"
         },
         "database": {
