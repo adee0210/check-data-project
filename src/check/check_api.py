@@ -211,11 +211,6 @@ class CheckAPI:
                 error_message = "Không có dữ liệu mới"
                 api_error = False
 
-            except requests.exceptions.Timeout:
-                error_message = "Timeout khi gọi API"
-                error_type = "API"
-                api_error = True
-                self.logger_api.error(f"Lỗi API: {error_message} cho {display_name}")
             except requests.exceptions.ConnectionError:
                 error_message = "Không thể kết nối đến server"
                 error_type = "API"
