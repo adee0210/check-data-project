@@ -18,26 +18,10 @@
         "symbols": {
             "auto_sync": false,
             "values": [
-                "BTC",
-                "ETH",
-                "USDT",
-                "BNB",
-                "XRP",
-                "USDC",
-                "SOL",
-                "TRX",
-                "DOGE",
-                "ADA",
-                "BCH",
-                "LINK",
-                "HYPE",
-                "XMR",
-                "LEO",
-                "XLM",
-                "ZEC",
-                "USDe",
-                "LTC",
-                "DAI"
+                "BTCUSDT",
+                "ETHUSDT",
+                "BNBUSDT",
+                "XRPUSDT"
             ],
             "column": "symbol"
         },
