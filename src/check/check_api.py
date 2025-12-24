@@ -116,10 +116,18 @@ class CheckAPI:
                     if isinstance(response, dict):
                         # Có wrapper (code, message, data)
                         response_code = response.get("code", 200)
+                        response_message = response.get("message", "")
                         if response_code != 200:
-                            raise ValueError(
-                                f"Response code = {response_code} (không phải 200)"
-                            )
+                            # Check if this is a "no data available" message (should be warning, not error)
+                            if "No data available" in response_message:
+                                raise ValueError("EMPTY_DATA")
+                            else:
+                                error_details = (
+                                    f"Response code = {response_code} (không phải 200)"
+                                )
+                                if response_message:
+                                    error_details += f" - {response_message}"
+                                raise ValueError(error_details)
 
                         # Lấy data từ các key phổ biến (ưu tiên 'data' trước)
                         if "data" in response:
@@ -159,10 +167,16 @@ class CheckAPI:
                     if isinstance(response, dict):
                         # Có wrapper
                         response_code = response.get("code", 200)
+                        response_message = response.get("message", "")
                         if response_code != 200:
-                            raise ValueError(
-                                f"Response code = {response_code} (không phải 200)"
-                            )
+                            # Check if this is a "no data available" message (should be warning, not error)
+                            if "No data available" in response_message:
+                                raise ValueError("EMPTY_DATA")
+                            else:
+                                error_details = f"Response code = {response_code}"
+                                if response_message:
+                                    error_details += f" - {response_message}"
+                                raise ValueError(error_details)
 
                         # Lấy data từ các key phổ biến (ưu tiên 'data' trước)
                         if "data" in response:
@@ -267,6 +281,10 @@ class CheckAPI:
                     display_name, alert_frequency
                 )
 
+                self.logger_api.info(
+                    f"API error for {display_name}: should_send_alert={should_send_alert}, error_type={error_type}"
+                )
+
                 if should_send_alert:
                     # Build source_info với API URL
                     source_info = {"type": "API", "url": uri}
@@ -277,7 +295,11 @@ class CheckAPI:
                     else:
                         alert_level = "error"
 
-                    self.platform_util.send_alert(
+                    self.logger_api.info(
+                        f"Sending {alert_level} alert for {display_name}"
+                    )
+
+                    result = self.platform_util.send_alert(
                         api_name=api_name,
                         symbol=symbol,
                         overdue_seconds=0,
@@ -289,6 +311,7 @@ class CheckAPI:
                         error_type=error_type,
                         source_info=source_info,
                     )
+
                     self.tracker.record_alert_sent(display_name)
 
                 await asyncio.sleep(check_frequency)

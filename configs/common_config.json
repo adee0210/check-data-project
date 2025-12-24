@@ -1,7 +1,7 @@
 {
     "PLATFORM_CONFIG": {
         "discord": {
-            "webhooks_url": "https://discord.com/api/webhooks/1450020771450585121/vaAyEWssF72gRv1bemxufWP4dOLdn9KJQ3Yqxadwra3A36d9xBYRr7YBr4UQzavPgV0E",
+            "webhooks_url": "https://discord.com/api/webhooks/1444980293542088786/JhmtaTkgngBYnwbA827wBKfymjnUouliRU0Ktgy1BrsWfge0BEAJSj0kq8RQxr_O7y45",
             "is_primary": true
         },
         "telegram": {

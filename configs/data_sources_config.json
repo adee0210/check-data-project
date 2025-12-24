@@ -1,4 +1,57 @@
 {
+    "funding-rate": {
+        "api": {
+            "enable": true,
+            "url": "http://192.168.110.164:8010/crypto/funding_rate/?symbols={symbol}&days=0",
+            "record_pointer": 0,
+            "column_to_check": "datetime"
+        },
+        "database": {
+            "enable": true,
+            "type": "mongodb",
+            "database": "funding_rate_db",
+            "collection_name": "realtime",
+            "record_pointer": 0,
+            "column_to_check": "datetime",
+            "user_connect": "duc_le_connect"
+        },
+        "symbols": {
+            "auto_sync": false,
+            "values": [
+                "BTC",
+                "ETH",
+                "USDT",
+                "BNB",
+                "XRP",
+                "USDC",
+                "SOL",
+                "TRX",
+                "DOGE",
+                "ADA",
+                "BCH",
+                "LINK",
+                "HYPE",
+                "XMR",
+                "LEO",
+                "XLM",
+                "ZEC",
+                "USDe",
+                "LTC",
+                "DAI"
+            ],
+            "column": "symbol"
+        },
+        "check": {
+            "timezone_offset": 0,
+            "allow_delay": 86400,
+            "check_frequency": 10,
+            "alert_frequency": 300
+        },
+        "schedule": {
+            "valid_days": null,
+            "time_ranges": null
+        }
+    },
     "gold-data": {
         "api": {
             "enable": true,
@@ -109,7 +162,7 @@
                 4
             ],
             "time_ranges": [
-                "09:01:00-11:30:00",
+                "09:16:00-11:30:00",
                 "13:01:00-14:30:00",
                 "14:45:00-14:46:00"
             ]
@@ -298,7 +351,7 @@
                 4
             ],
             "time_ranges": [
-                "09:00:00-09:45:00"
+                "09:01:00-09:45:00"
             ]
         }
     },
@@ -364,7 +417,7 @@
                 4
             ],
             "time_ranges": [
-                "09:01:00-11:30:00",
+                "09:16:00-11:30:00",
                 "13:01:00-14:30:00",
                 "14:45:00-14:45:30"
             ]
