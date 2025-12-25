@@ -44,7 +44,7 @@ class PlatformManager:
         self.notifiers: Dict[str, BasePlatformNotifier] = {}
         self._load_notifiers()
 
-    def _load_platform_config(self) -> Dict[str, Any]:
+    def _load_platform_config(self):
         """
         Load platform config từ common_config.json
 
@@ -56,9 +56,7 @@ class PlatformManager:
         config = LoadConfigUtil.load_json_to_variable("common_config.json")
         return config.get("PLATFORM_CONFIG", {})
 
-    def _create_notifier(
-        self, platform_name: str, config: Dict[str, Any]
-    ) -> Optional[BasePlatformNotifier]:
+    def _create_notifier(self, platform_name, config):
         """
         Factory method: Tạo notifier instance theo platform
 
@@ -87,7 +85,7 @@ class PlatformManager:
             self.logger.error(f"Lỗi tạo notifier cho {platform_name}: {str(e)}")
             return None
 
-    def _load_notifiers(self) -> None:
+    def _load_notifiers(self):
         """
         Load tất cả platform notifiers từ config
         """
@@ -103,7 +101,7 @@ class PlatformManager:
                 else:
                     self.logger.info(f"Đã load {platform_name} notifier (disabled)")
 
-    def reload_config(self) -> None:
+    def reload_config(self):
         """
         Reload platform config và recreate notifiers
 
@@ -113,7 +111,7 @@ class PlatformManager:
         self._load_notifiers()
         self.logger.info("Đã reload platform config")
 
-    def get_primary_platforms(self) -> List[str]:
+    def get_primary_platforms(self):
         """
         Lấy danh sách platforms có is_primary=True
 
@@ -139,7 +137,7 @@ class PlatformManager:
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
         status_message: Optional[str] = None,
-    ) -> Dict[str, bool]:
+    ):
         """
         Gửi alert đến TẤT CẢ primary platforms
 
@@ -214,7 +212,7 @@ class PlatformManager:
         alert_level: str = "warning",
         error_message: str = "Không có dữ liệu mới",
         error_type: Optional[str] = None,
-    ) -> bool:
+    ):
         """
         Gửi alert đến 1 platform cụ thể (bỏ qua is_primary)
 
@@ -247,7 +245,7 @@ class PlatformManager:
             self.logger.error(f"Lỗi gửi alert qua {platform_name}: {str(e)}")
             return False
 
-    def send_holiday_alert(self, message: str) -> Dict[str, bool]:
+    def send_holiday_alert(self, message):
         """Holiday alerts removed — no-op.
 
         Kept for compatibility; returns empty mapping.
@@ -257,7 +255,7 @@ class PlatformManager:
         )
         return {}
 
-    def list_supported_platforms(self) -> List[str]:
+    def list_supported_platforms(self):
         """
         Liệt kê các platforms được hỗ trợ
 
@@ -266,7 +264,7 @@ class PlatformManager:
         """
         return list(self.NOTIFIER_REGISTRY.keys())
 
-    def list_loaded_platforms(self) -> List[str]:
+    def list_loaded_platforms(self):
         """
         Liệt kê các platforms đã được load
 

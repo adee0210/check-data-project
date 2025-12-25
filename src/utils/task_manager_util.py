@@ -4,7 +4,7 @@ import asyncio
 class TaskManager:
     """Quản lý tạo và chạy các task async dùng chung cho nhiều loại kiểm tra"""
 
-    def create_tasks(self, task_func, configs: dict):
+    def create_tasks(self, task_func, configs):
         """
         Tạo danh sách các task từ configs
 
@@ -30,7 +30,7 @@ class TaskManager:
                 tasks.append(task)
         return tasks
 
-    async def run_tasks(self, task_func, configs: dict):
+    async def run_tasks(self, task_func, configs):
         """
         Khởi tạo và chạy các task với gather
 

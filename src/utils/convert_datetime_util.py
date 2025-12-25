@@ -29,7 +29,7 @@ class ConvertDatetimeUtil:
         Chuyển đổi string, date, hoặc datetime object thành datetime object
 
         Hỗ trợ:
-        - datetime.datetime object (trả về luôn)
+        - datetime.datetime object
         - datetime.date object (convert sang datetime với time 00:00:00)
         - String ISO format: "2025-12-04T14:30:00", "2025-12-04T14:30:00Z"
         - String datetime: "2025-12-04 14:30:00"
@@ -46,11 +46,11 @@ class ConvertDatetimeUtil:
         if datetime_str is None:
             raise ValueError("datetime_str không được None")
 
-        # Nếu đã là datetime object, trả về luôn
+        # Nếu đã là datetime object, trả về
         if isinstance(datetime_str, datetime.datetime):
             return datetime_str
 
-        # Nếu là datetime.date (PostgreSQL thường trả về kiểu này)
+        # Nếu là datetime.date
         if isinstance(datetime_str, datetime.date):
             # Convert date sang datetime với time 00:00:00
             return datetime.datetime.combine(datetime_str, datetime.time.min)

@@ -18,7 +18,7 @@ class MongoDBConnector(BaseDatabaseConnector):
         self.client = None
         self.db = None
 
-    def connect(self, config: Dict[str, Any]) -> Any:
+    def connect(self, config):
         """
         Kết nối đến MongoDB
 
@@ -41,8 +41,7 @@ class MongoDBConnector(BaseDatabaseConnector):
             from pymongo import MongoClient
         except ImportError:
             raise ImportError(
-                f"Thiếu thư viện MongoDB. "
-                f"Cài đặt: pip install {self.get_required_package()}"
+                "Thiếu thư viện MongoDB. Cài đặt dependencies từ requirements.txt"
             )
 
         # Validate required fields
@@ -75,7 +74,7 @@ class MongoDBConnector(BaseDatabaseConnector):
             self.logger.error(f"Lỗi kết nối MongoDB: {str(e)}")
             raise ConnectionError(f"Không thể kết nối MongoDB: {str(e)}")
 
-    def query(self, config: Dict[str, Any], symbol: Optional[str] = None) -> datetime:
+    def query(self, config, symbol):
         """
         Query MongoDB để lấy timestamp mới nhất/cũ nhất
 
@@ -156,7 +155,7 @@ class MongoDBConnector(BaseDatabaseConnector):
             self.logger.error(f"Lỗi query MongoDB: {str(e)}")
             raise
 
-    def close(self) -> None:
+    def close(self):
         """
         Đóng MongoDB connection
         """
@@ -171,16 +170,7 @@ class MongoDBConnector(BaseDatabaseConnector):
             self.db = None
             self.connection = None
 
-    def get_required_package(self) -> str:
-        """
-        Trả về package name cần cài đặt
-
-        Returns:
-            "pymongo"
-        """
-        return "pymongo"
-
-    def get_distinct_symbols(self, collection_name: str, symbol_column: str) -> list:
+    def get_distinct_symbols(self, collection_name, symbol_column):
         """
         Lấy danh sách unique symbols từ collection
 

@@ -6,12 +6,12 @@ logger = logging.getLogger("CheckAPI")
 
 
 class DataValidator:
-    """Xử lý logic kiểm tra dữ liệu hợp lệ"""
+    """Logic kiểm tra dữ liệu hợp lệ"""
 
     @staticmethod
     def is_data_fresh(data_datetime: datetime, allow_delay):
         """
-        Kiểm tra xem dữ liệu có còn mới không (dựa vào allow_delay)
+        Kiểm tra xem dữ liệu có còn mới không dựa vào allow_delay
 
         Logic:
         - Nếu data_datetime chỉ có ngày (00:00:00): So sánh theo ngày
@@ -37,7 +37,7 @@ class DataValidator:
         )
 
         if is_date_only:
-            # So sánh theo ngày - sử dụng date() để bỏ phần giờ
+            # So sánh theo ngày
             data_date = data_datetime.date()
             current_date = current_time.date()
 
@@ -55,7 +55,7 @@ class DataValidator:
                 overdue_seconds = days_overdue * 86400
                 return False, overdue_seconds
         else:
-            # So sánh theo giây chính xác (logic cũ cho datetime đầy đủ)
+            # So sánh theo giây chính xác
             time_threshold = current_time - timedelta(seconds=allow_delay)
 
             if data_datetime >= time_threshold:
@@ -134,7 +134,7 @@ class DataValidator:
     @staticmethod
     def calculate_adjusted_overdue(latest_time, current_time, time_ranges):
         """
-        Tính thời gian quá hạn đã điều chỉnh, chỉ tính trong khoảng thời gian hoạt động.
+        Tính thời gian quá hạn, chỉ tính trong khoảng thời gian hoạt động.
 
         Tham số:
             latest_time (datetime): Thời gian của dữ liệu mới nhất.
@@ -142,7 +142,7 @@ class DataValidator:
             time_ranges (list): Danh sách các khoảng thời gian hoạt động dạng "HH:MM:SS-HH:MM:SS".
 
         Trả về:
-            int: Số giây quá hạn đã điều chỉnh.
+            int: Số giây quá hạn.
         """
         adjusted_overdue = 0
         if time_ranges is None or not time_ranges:

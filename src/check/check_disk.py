@@ -16,7 +16,7 @@ from utils.platform_util.platform_manager import PlatformManager
 
 
 class CheckDisk:
-    """Class kiểm tra freshness của file trên disk bằng cách đọc nội dung hoặc mtime"""
+    """Class kiểm tra file trên disk"""
 
     def __init__(self):
         self.logger_disk = LoggerConfig.logger_config("CheckDisk", "disk.log")
@@ -140,7 +140,6 @@ class CheckDisk:
         while True:
             try:
                 # Reload config mỗi lần loop để nhận config mới
-                # (LoadConfigUtil có cache, chỉ reload khi file thay đổi)
                 all_config = self._load_config()
                 disk_config = all_config.get(disk_name, disk_config)
 
@@ -162,7 +161,7 @@ class CheckDisk:
                 allow_delay = check_cfg.get("allow_delay", 60)
                 alert_frequency = check_cfg.get("alert_frequency", 60)
                 check_frequency = check_cfg.get("check_frequency", 10)
-                # Note: max_stale_seconds removed — always use alert_frequency behaviour
+                max_check = check_cfg.get("max_check", 10)
 
                 valid_schedule = schedule_cfg
 
@@ -190,7 +189,6 @@ class CheckDisk:
                         )
                         self.outside_schedule_logged[display_name] = False
 
-                # Inner try block cho file operations
                 try:
                     # Kiểm tra file type và lấy datetime
                     if file_type in ["json", "csv", "txt"]:
@@ -277,12 +275,10 @@ class CheckDisk:
                         )
                         self.last_alert_times[display_name] = current_time
 
-                # freshness check
                 is_fresh, overdue_seconds = DataValidator.is_data_fresh(
                     file_datetime, allow_delay
                 )
 
-                # Tính adjusted overdue nếu có time_ranges
                 active_start_time = DataValidator.get_active_start_time(
                     schedule_cfg.get("time_ranges") or [], datetime.now()
                 )
@@ -304,22 +300,48 @@ class CheckDisk:
                         self.logger_disk.info(f"Có dữ liệu mới cho {display_name}")
                         self.tracker.last_seen_timestamps[display_name] = data_timestamp
 
-                    # reset state
                     self.tracker.reset_fresh_data(display_name)
+                    # Reset holiday tracking khi data trở lại bình thường
+                    self.tracker.reset_holiday_tracking(display_name)
                     await asyncio.sleep(check_frequency)
                     continue
 
-                # stale
                 time_str = DataValidator.format_time_overdue(
                     overdue_seconds, allow_delay
                 )
 
-                self.logger_disk.warning(
+                # Tạo warning message
+                warning_message = (
                     f"CẢNH BÁO: File quá hạn {time_str} cho {display_name}"
                 )
+                self.logger_disk.warning(warning_message)
 
                 if self.tracker.should_send_alert(display_name, alert_frequency):
+                    # Track số lần gửi alert khi thực sự gửi alert
+                    alert_count, current_alert_frequency, exceeded_max = (
+                        self.tracker.track_alert_count(
+                            display_name,
+                            max_check=max_check,
+                            initial_alert_frequency=alert_frequency,
+                            max_alert_frequency=1800,  # 30 phút
+                        )
+                    )
+
+                    # Cập nhật alert_frequency dựa trên holiday tracking
+                    alert_frequency = current_alert_frequency
+
+                    # Log thêm thông tin nếu vượt max_check
+                    if alert_count > max_check:
+                        holiday_info = f" (Lần gửi alert thứ {alert_count}/{max_check}, nghi ngờ là ngày lễ)"
+                        self.logger_disk.warning(warning_message + holiday_info)
+
                     source_info = {"type": "DISK", "file_path": file_path}
+
+                    alert_message = "File không cập nhật"
+                    if alert_count > max_check:
+                        alert_message += f" | Cảnh báo: Lần gửi alert thứ {alert_count}/{max_check} - Nghi ngờ là ngày lễ"
+                        alert_message += f" | Alert frequency tăng lên: {alert_frequency} giây (tối đa 1800 giây)"
+
                     self.platform_util.send_alert(
                         api_name=disk_name,
                         symbol=symbol,
@@ -328,7 +350,7 @@ class CheckDisk:
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
                         alert_level="warning",
-                        error_message="File không cập nhật",
+                        error_message=alert_message,
                         source_info=source_info,
                     )
                     self.tracker.record_alert_sent(display_name)
@@ -336,14 +358,12 @@ class CheckDisk:
                 await asyncio.sleep(check_frequency)
 
             except Exception as e:
-                # Catch-all cho bất kỳ lỗi nào chưa được xử lý
                 error_message = f"Lỗi không xác định: {str(e)}"
                 self.logger_disk.error(
                     f"CRITICAL ERROR trong task {display_name}: {error_message}",
                     exc_info=True,
                 )
 
-                # Gửi alert về lỗi critical
                 current_time = datetime.now()
                 last_alert = self.last_alert_times.get(display_name)
 
@@ -353,7 +373,6 @@ class CheckDisk:
                 )
 
                 if should_send_alert:
-                    # Build source_info với file path
                     source_info = {"type": "DISK", "file_path": file_path}
 
                     self.platform_util.send_alert(
@@ -374,8 +393,8 @@ class CheckDisk:
                 await asyncio.sleep(check_frequency)
 
     async def run_disk_tasks(self):
-        """Chạy tất cả các task kiểm tra disk với config được load động"""
-        running_tasks = {}  # {display_name: task}
+        """Chạy tất cả các task kiểm tra disk với config được load"""
+        running_tasks = {}
 
         while True:
             # Reload config để phát hiện thay đổi
@@ -387,8 +406,6 @@ class CheckDisk:
                 # Kiểm tra xem có symbols không (giống API logic)
                 symbols_cfg = disk_config.get("symbols", {})
                 if symbols_cfg.get("auto_sync"):
-                    # TODO: Implement symbol resolution nếu cần
-                    # Hiện tại bỏ qua auto_sync cho disk
                     pass
 
                 symbols_list = symbols_cfg.get("list", [])

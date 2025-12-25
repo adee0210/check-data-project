@@ -12,7 +12,7 @@ class TelegramNotifier(BasePlatformNotifier):
     Sử dụng Telegram Bot API để gửi messages
     """
 
-    def validate_config(self) -> None:
+    def validate_config(self):
         """
         Validate Telegram config
 
@@ -25,7 +25,7 @@ class TelegramNotifier(BasePlatformNotifier):
         if not self.config.get("chat_id"):
             raise ValueError("Thiếu 'chat_id' trong Telegram config")
 
-    def get_platform_name(self) -> str:
+    def get_platform_name(self):
         """
         Trả về tên platform
 
@@ -47,7 +47,7 @@ class TelegramNotifier(BasePlatformNotifier):
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
         status_message: Optional[str] = None,
-    ) -> bool:
+    ):
         """
         Gửi alert đến Telegram qua Bot API
 
@@ -88,7 +88,7 @@ class TelegramNotifier(BasePlatformNotifier):
         payload = {
             "chat_id": chat_id,
             "text": message,
-            "parse_mode": "Markdown",  # Support bold, italic, etc.
+            "parse_mode": "Markdown",
         }
 
         try:
@@ -110,7 +110,7 @@ class TelegramNotifier(BasePlatformNotifier):
             self.logger.error(f"Lỗi gửi đến Telegram: {str(e)}")
             return False
 
-    def _format_telegram_message(self, data: Dict[str, Any]) -> str:
+    def _format_telegram_message(self, data):
         """
         Format message thành Telegram Markdown
 
@@ -151,7 +151,7 @@ class TelegramNotifier(BasePlatformNotifier):
 
         return message
 
-    def send_holiday_alert(self, message: str) -> bool:
+    def send_holiday_alert(self, message: str):
         """
         Gửi alert đặc biệt cho holiday detection
 

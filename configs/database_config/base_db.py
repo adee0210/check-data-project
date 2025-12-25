@@ -9,24 +9,18 @@ class BaseDatabaseConnector(ABC):
     """
     Abstract base class cho tất cả database connectors
 
-    Các subclass phải implement:
+    Các class con phải implement:
     - connect(): Tạo connection
     - query(): Query dữ liệu
     - close(): Đóng connection
     """
 
     def __init__(self, logger):
-        """
-        Initialize base connector
-
-        Args:
-            logger: Logger instance
-        """
         self.logger = logger
         self.connection = None
 
     @abstractmethod
-    def connect(self, config: Dict[str, Any]) -> Any:
+    def connect(self, config):
         """
         Tạo connection đến database
 
@@ -42,7 +36,7 @@ class BaseDatabaseConnector(ABC):
         pass
 
     @abstractmethod
-    def query(self, config: Dict[str, Any], symbol: Optional[str] = None) -> datetime:
+    def query(self, config, symbol):
         """
         Query database để lấy timestamp mới nhất/cũ nhất
 
@@ -59,34 +53,21 @@ class BaseDatabaseConnector(ABC):
         pass
 
     @abstractmethod
-    def close(self) -> None:
+    def close(self):
         """
         Đóng database connection
         """
         pass
 
-    @abstractmethod
-    def get_required_package(self) -> str:
-        """
-        Trả về tên package cần cài đặt
-
-        Returns:
-            Package name (e.g., "psycopg2-binary", "pymongo")
-        """
-        pass
-
-    def is_connected(self) -> bool:
+    def is_connected(self):
         """
         Check xem connection còn active không
-
-        Subclasses có thể override để check connection status cụ thể hơn
-
         Returns:
             True nếu connected, False nếu không
         """
         return self.connection is not None
 
-    def validate_config(self, config: Dict[str, Any], required_fields: list) -> None:
+    def validate_config(self, config, required_fields):
         """
         Validate config có đủ required fields không
 

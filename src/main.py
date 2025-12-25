@@ -38,12 +38,10 @@ import sys
 import atexit
 
 
-# Setup logging
 logging_config_path = project_root / "configs" / "logging_config.py"
 exec(open(logging_config_path).read())
 logger = logging.getLogger("MainProcess")
 
-# Initialize PlatformManager for shutdown alerts
 platform_manager = PlatformManager()
 
 # Flag để tránh gửi alert duplicate khi shutdown bình thường
@@ -64,7 +62,7 @@ def send_shutdown_alert(reason="Hệ thống đã dừng", alert_level="info"):
 
     try:
         log_func = logger.info if alert_level == "info" else logger.warning
-        log_func(f"📤 Gửi alert shutdown: {reason}")
+        log_func(f"Gửi alert shutdown: {reason}")
         platform_manager.send_alert(
             api_name="SYSTEM",
             symbol=None,
@@ -79,15 +77,13 @@ def send_shutdown_alert(reason="Hệ thống đã dừng", alert_level="info"):
         )
         _shutdown_handled = True
     except Exception as e:
-        logger.error(f"❌ Lỗi gửi shutdown alert: {e}")
+        logger.error(f"Lỗi gửi shutdown alert: {e}")
 
 
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully"""
     global _shutdown_handled
-    logger.info("=" * 80)
-    logger.info("🛑 Nhận tín hiệu dừng hệ thống - Đang tắt giám sát...")
-    logger.info("=" * 80)
+    logger.info("Nhận tín hiệu dừng hệ thống - Đang tắt giám sát...")
 
     # Gửi alert INFO cho shutdown có kiểm soát
     send_shutdown_alert("Nhận tín hiệu SIGTERM/SIGINT", alert_level="info")
@@ -101,7 +97,7 @@ def on_exit():
     global _shutdown_handled
     # Chỉ gửi alert nếu chưa được xử lý bởi signal handler
     if not _shutdown_handled:
-        logger.warning("⚠️ Chương trình thoát bất thường...")
+        logger.warning("Chương trình thoát bất thường...")
         send_shutdown_alert("Chương trình thoát bất thường", alert_level="error")
 
 
@@ -122,10 +118,6 @@ async def main():
     - Database monitoring (check_database)
     - Disk monitoring (check_disk) - optional
     """
-    logger.info("=" * 80)
-    logger.info("🚀 BẮT ĐẦU HỆ THỐNG GIÁM SÁT DỮ LIỆU")
-    logger.info("=" * 80)
-
     # Gửi alert khởi động thành công
     try:
         platform_manager.send_alert(
@@ -136,13 +128,13 @@ async def main():
             check_frequency=0,
             alert_frequency=0,
             alert_level="info",
-            error_message="Hệ thống giám sát đã khởi động thành công",
+            error_message="Check Data đã khởi động",
             error_type="SYSTEM",
             source_info={"type": "SYSTEM", "message": "Data monitoring system started"},
         )
-        logger.info("✅ Đã gửi alert khởi động thành công")
+        logger.info(" Đã gửi alert")
     except Exception as e:
-        logger.error(f"❌ Lỗi gửi startup alert: {e}")
+        logger.error(f"Lỗi gửi startup alert: {e}")
 
     # Khởi tạo API checker
     api_checker = CheckAPI()
@@ -150,7 +142,7 @@ async def main():
     # Khởi tạo Database checker
     db_checker = CheckDatabase()
 
-    # Khởi tạo Disk checker (tùy chọn)
+    # Khởi tạo Disk checker
     disk_checker = CheckDisk()
 
     try:
@@ -161,14 +153,12 @@ async def main():
             disk_checker.run_disk_tasks(),
         )
     except Exception as e:
-        logger.error(f"❌ LỖI NGHIÊM TRỌNG trong main: {e}", exc_info=True)
-        # Gửi alert về lỗi nghiêm trọng
+        logger.error(f"LỖI NGHIÊM TRỌNG trong main: {e}", exc_info=True)
+        # Gửi alert về lỗi
         send_shutdown_alert(f"Lỗi nghiêm trọng: {str(e)}", alert_level="error")
         raise
     finally:
-        logger.info("=" * 80)
-        logger.info("🛑 DỪNG HỆ THỐNG GIÁM SÁT DỮ LIỆU")
-        logger.info("=" * 80)
+        logger.info("DỪNG CHECK DATA")
 
 
 if __name__ == "__main__":

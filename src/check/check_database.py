@@ -15,7 +15,7 @@ from utils.symbol_resolver_util import SymbolResolverUtil
 
 
 class CheckDatabase:
-    """Class kiểm tra data freshness từ database (MongoDB, PostgreSQL)"""
+    """Class kiểm tra data từ database (MongoDB, PostgreSQL)"""
 
     def __init__(self):
         self.logger_db = LoggerConfig.logger_config("CheckDatabase", "database.log")
@@ -27,10 +27,8 @@ class CheckDatabase:
         # Sử dụng AlertTracker để quản lý tất cả tracking
         self.tracker = AlertTracker()
 
-        # Tracking outside schedule logging
         self.outside_schedule_logged = {}
 
-        # Legacy tracking dictionaries (cần migrate dần sang AlertTracker)
         self.max_stale_exceeded = {}
         self.last_alert_times = {}
         self.first_stale_times = {}
@@ -90,7 +88,6 @@ class CheckDatabase:
         while True:
             try:
                 # Reload config mỗi lần loop để nhận config mới
-                # (LoadConfigUtil có cache, chỉ reload khi file thay đổi)
                 all_config = self._load_config()
                 db_config = all_config.get(db_name, db_config)
 
@@ -102,6 +99,7 @@ class CheckDatabase:
                 allow_delay = check_cfg.get("allow_delay", 60)
                 alert_frequency = check_cfg.get("alert_frequency", 60)
                 check_frequency = check_cfg.get("check_frequency", 10)
+                max_check = check_cfg.get("max_check", 10)
 
                 valid_schedule = schedule_cfg
 
@@ -200,6 +198,8 @@ class CheckDatabase:
                     self.logger_db.info(
                         f"Kiểm tra database {display_name} - Có dữ liệu mới"
                     )
+                    # Reset holiday tracking khi data trở lại bình thường
+                    self.tracker.reset_holiday_tracking(display_name)
                     await asyncio.sleep(check_frequency)
                     continue
 
@@ -216,7 +216,7 @@ class CheckDatabase:
                 stale_count = self.tracker.get_stale_count()
                 total_dbs = max(stale_count, 1)
 
-                # Nội dung cảnh báo đồng bộ giữa log và alert
+                # Tạo warning message
                 warning_message = (
                     f"Dữ liệu database quá hạn {time_str} cho {display_name}"
                 )
@@ -227,6 +227,24 @@ class CheckDatabase:
                 )
 
                 if should_send_alert:
+                    # Track số lần gửi alert khi thực sự gửi alert
+                    alert_count, current_alert_frequency, exceeded_max = (
+                        self.tracker.track_alert_count(
+                            display_name,
+                            max_check=max_check,
+                            initial_alert_frequency=alert_frequency,
+                            max_alert_frequency=1800,  # 30 phút
+                        )
+                    )
+
+                    # Cập nhật alert_frequency dựa trên holiday tracking
+                    alert_frequency = current_alert_frequency
+
+                    # Log thêm thông tin nếu vượt max_check
+                    if alert_count > max_check:
+                        holiday_info = f" (Lần gửi alert thứ {alert_count}/{max_check}, nghi ngờ là ngày lễ)"
+                        self.logger_db.warning(warning_message + holiday_info)
+
                     db_cfg = db_config.get("database", {})
                     source_info = {"type": "DATABASE"}
                     if "type" in db_cfg:
@@ -238,6 +256,13 @@ class CheckDatabase:
                     elif "table_name" in db_cfg:
                         source_info["table"] = db_cfg["table_name"]
 
+                    alert_message = (
+                        f"Dữ liệu database quá hạn {time_str} cho {display_name}"
+                    )
+                    if alert_count > max_check:
+                        alert_message += f" | Cảnh báo: Lần gửi alert thứ {alert_count}/{max_check} - Nghi ngờ là ngày lễ"
+                        alert_message += f" | Alert frequency tăng lên: {alert_frequency} giây (tối đa 1800 giây)"
+
                     self.platform_util.send_alert(
                         api_name=db_name,
                         symbol=symbol,
@@ -246,7 +271,7 @@ class CheckDatabase:
                         check_frequency=check_frequency,
                         alert_frequency=alert_frequency,
                         alert_level="warning",
-                        error_message=f"Dữ liệu database quá hạn {time_str} cho {display_name}",
+                        error_message=alert_message,
                         source_info=source_info,
                     )
                     self.tracker.record_alert_sent(display_name)

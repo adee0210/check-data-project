@@ -1,8 +1,3 @@
-"""
-Alert Tracker Utility
-Quản lý tất cả tracking cho alert: frequency, stale, low-activity, empty data, etc.
-"""
-
 from datetime import datetime
 from typing import Dict, Optional, Set, Tuple
 
@@ -19,22 +14,26 @@ class AlertTracker:
         low_activity_symbols: Set các symbol đã xác định low-activity
         consecutive_stale_days: Track số ngày liên tiếp stale
         empty_data_tracking: Track empty data warnings
+        holiday_tracking: Track số lần check lỗi liên tiếp để phát hiện ngày lễ
     """
 
     def __init__(self):
-        self.last_alert_times: Dict[str, datetime] = {}
-        self.first_stale_times: Dict[str, datetime] = {}
-        self.outside_schedule_logged: Dict[str, bool] = {}
-        self.max_stale_exceeded: Dict[str, datetime] = {}
-        self.low_activity_symbols: Set[str] = set()
-        self.consecutive_stale_days: Dict[str, Tuple[str, int]] = {}
-        self.empty_data_tracking: Dict[str, Dict] = {}
-        # Note: holiday detection removed — no holiday tracking
+        self.last_alert_times = {}
+        self.first_stale_times = {}
+        self.outside_schedule_logged = {}
+        self.max_stale_exceeded = {}
+        self.low_activity_symbols = set()
+        self.consecutive_stale_days = {}
+        self.empty_data_tracking = {}
+
+        # Holiday detection: Track số lần gửi alert để phát hiện ngày lễ
+        # Format: {display_name: {'alert_count': int, 'alert_frequency': int}}
+        self.holiday_tracking = {}
 
         # Track timestamp của data cuối cùng để phát hiện data mới
-        self.last_seen_timestamps: Dict[str, str] = {}
+        self.last_seen_timestamps = {}
 
-    def should_send_alert(self, display_name: str, alert_frequency: int) -> bool:
+    def should_send_alert(self, display_name, alert_frequency):
         """
         Kiểm tra xem có nên gửi alert không dựa vào alert_frequency
 
@@ -53,7 +52,7 @@ class AlertTracker:
         time_since_last_alert = (current_time - last_alert).total_seconds()
         return time_since_last_alert >= alert_frequency
 
-    def record_alert_sent(self, display_name: str) -> None:
+    def record_alert_sent(self, display_name):
         """
         Ghi nhận đã gửi alert
 
@@ -62,7 +61,7 @@ class AlertTracker:
         """
         self.last_alert_times[display_name] = datetime.now()
 
-    def is_in_silent_mode(self, display_name: str) -> bool:
+    def is_in_silent_mode(self, display_name):
         """
         Kiểm tra xem item có đang ở silent mode không
 
@@ -74,7 +73,7 @@ class AlertTracker:
         """
         return display_name in self.max_stale_exceeded
 
-    def is_low_activity(self, display_name: str) -> bool:
+    def is_low_activity(self, display_name):
         """
         Kiểm tra xem item có phải low-activity không
 
@@ -86,9 +85,7 @@ class AlertTracker:
         """
         return display_name in self.low_activity_symbols
 
-    def track_empty_data(
-        self, display_name: str, silent_threshold_seconds: int = 0
-    ) -> Tuple[bool, Optional[int]]:
+    def track_empty_data(self, display_name, silent_threshold_seconds=0):
         """
         Track empty data warnings
 
@@ -120,7 +117,7 @@ class AlertTracker:
         # Không còn silent mode - luôn gửi alert
         return False, int(duration)
 
-    def reset_empty_data(self, display_name: str) -> Optional[int]:
+    def reset_empty_data(self, display_name):
         """
         Reset empty data tracking khi có data trở lại
 
@@ -140,11 +137,11 @@ class AlertTracker:
 
     def track_stale_data(
         self,
-        display_name: str,
-        max_stale_seconds: Optional[int],
-        total_stale_seconds: int,
-        data_timestamp: Optional[str] = None,
-    ) -> Tuple[bool, bool, bool]:
+        display_name,
+        max_stale_seconds,
+        total_stale_seconds,
+        data_timestamp,
+    ):
         """
         Track stale data và xác định có vượt max_stale không
 
@@ -191,9 +188,7 @@ class AlertTracker:
 
         return False, False, has_new_data
 
-    def track_consecutive_stale_days(
-        self, display_name: str, low_activity_threshold_days: int = 2
-    ) -> Tuple[int, bool]:
+    def track_consecutive_stale_days(self, display_name, low_activity_threshold_days=2):
         """
         Track số ngày liên tiếp stale để phát hiện low-activity
 
@@ -229,7 +224,7 @@ class AlertTracker:
 
         return count, False
 
-    def reset_fresh_data(self, display_name: str) -> None:
+    def reset_fresh_data(self, display_name):
         """
         Reset tất cả tracking khi data fresh trở lại
 
@@ -253,7 +248,7 @@ class AlertTracker:
         if display_name in self.empty_data_tracking:
             del self.empty_data_tracking[display_name]
 
-    def get_stale_count(self) -> int:
+    def get_stale_count(self):
         """
         Lấy số lượng items đang stale
 
@@ -261,3 +256,81 @@ class AlertTracker:
             Số lượng items stale
         """
         return len(self.first_stale_times)
+
+    def track_alert_count(
+        self,
+        display_name,
+        max_check,
+        initial_alert_frequency,
+        max_alert_frequency=1800,
+    ):
+        """
+        Track số lần gửi alert để phát hiện ngày lễ
+
+        Khi gửi alert lần thứ max_check+1 trở đi, tăng alert_frequency lên 300 giây
+        Cứ mỗi lần gửi alert tiếp tục, tăng thêm 300 giây (tối đa 1800 giây = 30 phút)
+
+        Args:
+            display_name: Tên hiển thị của item
+            max_check: Ngưỡng số lần gửi alert trước khi kích hoạt holiday logic
+            initial_alert_frequency: Alert frequency ban đầu (giây)
+            max_alert_frequency: Alert frequency tối đa (mặc định 1800 = 30 phút)
+
+        Returns:
+            Tuple (alert_count, current_alert_frequency, exceeded_max_check):
+                - alert_count: Số lần gửi alert hiện tại
+                - current_alert_frequency: Alert frequency hiện tại (có thể tăng)
+                - exceeded_max_check: True nếu vừa vượt quá max_check (lần đầu tiên)
+        """
+        if display_name not in self.holiday_tracking:
+            # Lần đầu tiên ghi nhận alert
+            self.holiday_tracking[display_name] = {
+                "alert_count": 1,
+                "alert_frequency": initial_alert_frequency,
+            }
+            return 1, initial_alert_frequency, False
+
+        tracking = self.holiday_tracking[display_name]
+        tracking["alert_count"] += 1
+        alert_count = tracking["alert_count"]
+
+        # Kiểm tra xem vừa vượt quá max_check không
+        exceeded = False
+        if alert_count == max_check + 1:
+            exceeded = True
+
+        # Tính alert_frequency: từ max_check+1 trở đi, tăng 300 giây mỗi lần
+        if alert_count > max_check:
+            # Số lần tăng = alert_count - max_check
+            num_increases = alert_count - max_check
+            new_frequency = initial_alert_frequency + (num_increases * 300)
+            # Giới hạn tối đa
+            current_frequency = min(new_frequency, max_alert_frequency)
+        else:
+            current_frequency = initial_alert_frequency
+
+        tracking["alert_frequency"] = current_frequency
+
+        return alert_count, current_frequency, exceeded
+
+    def reset_holiday_tracking(self, display_name):
+        """
+        Reset holiday tracking khi data trở lại bình thường
+
+        Args:
+            display_name: Tên hiển thị của item
+        """
+        if display_name in self.holiday_tracking:
+            del self.holiday_tracking[display_name]
+
+    def get_holiday_tracking(self, display_name):
+        """
+        Lấy thông tin holiday tracking
+
+        Args:
+            display_name: Tên hiển thị của item
+
+        Returns:
+            Dict với thông tin tracking hoặc None nếu không có
+        """
+        return self.holiday_tracking.get(display_name)

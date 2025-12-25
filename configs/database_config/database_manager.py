@@ -1,5 +1,3 @@
-"""Database Manager - Quản lý tập trung tất cả database connections"""
-
 from typing import Any, Dict, Optional
 from datetime import datetime
 from configs.logging_config import LoggerConfig
@@ -11,8 +9,6 @@ from configs.database_config.postgres_config import PostgreSQLConnector
 class DatabaseManager:
     """
     Database Manager - Quản lý tất cả database connections
-
-    - Connection pooling (tái sử dụng connections)
     - Tự động reload config từ common_config.json
     - Factory pattern để tạo connectors
 
@@ -30,19 +26,14 @@ class DatabaseManager:
     CONNECTOR_REGISTRY = {
         "mongodb": MongoDBConnector,
         "postgresql": PostgreSQLConnector,
-        # Thêm: "mysql", hoặc các cái database khác ở đây : MySQLConnector,
+        # Thêm database khác ở đây : MySQLConnector,
     }
 
     def __init__(self):
-        """
-        Initialize Database Manager
-        """
         self.logger = LoggerConfig.logger_config("DatabaseManager")
-        self.connectors: Dict[str, BaseDatabaseConnector] = {}
+        self.connectors = {}
 
-    def _get_connection_config(
-        self, db_type: str, db_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _get_connection_config(self, db_type, db_config):
         """
         Build connection config từ common_config.json
 
@@ -65,7 +56,7 @@ class DatabaseManager:
             else db_config.get("database")
         )
 
-        # Extract user_connect từ config (mặc định là duc_le_connect nếu không có)
+        # Extract user_connect từ config
         user_connect = (
             db_cfg.get("user_connect", "duc_le_connect")
             if isinstance(db_cfg, dict)
@@ -79,7 +70,7 @@ class DatabaseManager:
         # Get connection profile từ DATABASE_CONNECTIONS
         database_connections = common_config.get("DATABASE_CONNECTIONS", {})
 
-        # Fallback: Nếu không có DATABASE_CONNECTIONS, thử dùng cấu trúc cũ
+        # Fallback: Nếu không có DATABASE_CONNECTIONS,dùng cấu trúc cũ
         if not database_connections:
             self.logger.warning(
                 "Không tìm thấy DATABASE_CONNECTIONS, sử dụng cấu trúc cũ (MONGO_CONFIG/POSTGRE_CONFIG)"
@@ -148,7 +139,7 @@ class DatabaseManager:
         else:
             raise ValueError(f"Database type không được hỗ trợ: {db_type}")
 
-    def _create_connector(self, db_type: str) -> BaseDatabaseConnector:
+    def _create_connector(self, db_type):
         """
         Factory method: Tạo connector instance theo db_type
 
@@ -172,7 +163,7 @@ class DatabaseManager:
 
         return connector_class(self.logger)
 
-    def connect(self, db_name: str, db_config: Dict[str, Any]) -> BaseDatabaseConnector:
+    def connect(self, db_name: str, db_config):
         """
         Tạo hoặc lấy existing connector
 
@@ -234,13 +225,6 @@ class DatabaseManager:
             )
             return connector
 
-        except ImportError as e:
-            connector = self._create_connector(db_type)
-            self.logger.error(
-                f"Thiếu thư viện cho {db_type}. "
-                f"Vui lòng cài đặt: pip install {connector.get_required_package()}"
-            )
-            raise
         except Exception as e:
             self.logger.error(f"Lỗi kết nối database {db_name}: {str(e)}")
             raise
@@ -291,7 +275,7 @@ class DatabaseManager:
         # Execute query
         return connector.query(query_config, symbol)
 
-    def get_distinct_symbols(self, db_name: str, db_config: Dict[str, Any]) -> list:
+    def get_distinct_symbols(self, db_name: str, db_config):
         """
         Lấy danh sách unique symbols từ database
 
@@ -323,7 +307,7 @@ class DatabaseManager:
 
         raise ValueError("Connector không hỗ trợ get_distinct_symbols")
 
-    def close(self, db_name: Optional[str] = None) -> None:
+    def close(self, db_name):
         """
         Đóng database connections
 
@@ -331,7 +315,6 @@ class DatabaseManager:
             db_name: Tên database cần đóng. Nếu None, đóng tất cả
         """
         if db_name:
-            # Close specific connector
             if db_name in self.connectors:
                 try:
                     self.connectors[db_name].close()
@@ -350,7 +333,7 @@ class DatabaseManager:
 
             self.connectors.clear()
 
-    def list_supported_types(self) -> list:
+    def list_supported_types(self):
         """
         Liệt kê các database types được hỗ trợ
 

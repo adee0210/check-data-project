@@ -6,12 +6,12 @@ logger = logging.getLogger("CheckAPI")
 
 
 class TimeValidator:
-    """Xử lý logic kiểm tra thời gian nằm trong lịch hợp lệ"""
+    """Logic kiểm tra thời gian nằm trong lịch hợp lệ"""
 
     @staticmethod
     def _check_single_schedule(schedule, current_weekday, current_time):
         """
-        Kiểm tra một lịch trình đơn
+        Kiểm tra một lịch trình
 
         Args:
             schedule: Dict với format {"valid_days": [...], "time_ranges": "..."} hoặc {"days": [...], "hours": "..."} (backward compatibility)
@@ -21,7 +21,6 @@ class TimeValidator:
         Returns:
             True nếu hợp lệ, False nếu không
         """
-        # Support both new and old key names
         days = (
             schedule.get("valid_days")
             if "valid_days" in schedule
@@ -119,7 +118,6 @@ class TimeValidator:
         if not valid_schedule:
             return True  # {} hoặc [] = không giới hạn
 
-        # Get current time in Vietnam timezone (UTC+7) - schedule luôn theo giờ VN
         tz = timezone(timedelta(hours=7))
         now = datetime.now(tz)
         current_weekday = now.weekday()  # 0=Monday, 6=Sunday

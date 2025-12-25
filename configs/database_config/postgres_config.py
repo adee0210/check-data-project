@@ -8,8 +8,6 @@ from configs.database_config.base_db import BaseDatabaseConnector
 class PostgreSQLConnector(BaseDatabaseConnector):
     """
     PostgreSQL connector implementation
-
-    Hỗ trợ:
     - Connection pooling
     - Auto-reconnect khi connection bị đóng
     """
@@ -17,7 +15,7 @@ class PostgreSQLConnector(BaseDatabaseConnector):
     def __init__(self, logger):
         super().__init__(logger)
 
-    def is_connected(self) -> bool:
+    def is_connected(self):
         """
         Check xem PostgreSQL connection còn active không
 
@@ -34,17 +32,16 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             return True
         except Exception:
             # Connection đã bị đóng hoặc không còn hoạt động
-            # KHÔNG set self.connection = None để tránh ảnh hưởng các connection pool khác
             return False
 
-    def connect(self, config: Dict[str, Any]) -> Any:
+    def connect(self, config):
         """
         Kết nối đến PostgreSQL
 
         Args:
             config: Dict chứa:
                 - host: PostgreSQL host
-                - port: PostgreSQL port (default: 5432)
+                - port: PostgreSQL port (5432)
                 - database: Database name
                 - username: Username
                 - password: Password
@@ -59,8 +56,7 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             import psycopg2
         except ImportError:
             raise ImportError(
-                f"Thiếu thư viện PostgreSQL. "
-                f"Cài đặt: pip install {self.get_required_package()}"
+                "Thiếu thư viện PostgreSQL. Cài đặt dependencies từ requirements.txt"
             )
 
         # Validate required fields
@@ -87,7 +83,7 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             self.logger.error(f"Lỗi kết nối PostgreSQL: {str(e)}")
             raise ConnectionError(f"Không thể kết nối PostgreSQL: {str(e)}")
 
-    def query(self, config: Dict[str, Any], symbol: Optional[str] = None) -> datetime:
+    def query(self, config, symbol):
         """
         Query PostgreSQL để lấy timestamp mới nhất/cũ nhất
 
@@ -111,7 +107,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                 "Connection đã bị đóng hoặc chưa kết nối đến PostgreSQL"
             )
 
-        # Validate required fields
         self.validate_config(config, ["table", "column_to_check"])
 
         table_name = config["table"]
@@ -119,7 +114,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
         record_pointer = config.get("record_pointer", 0)
         symbol_column = config.get("symbol_column")
 
-        # Determine aggregation function
         if record_pointer == 0:
             # Lấy bản ghi mới nhất: dùng MAX()
             agg_func = "MAX"
@@ -130,7 +124,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             # Fallback
             agg_func = "MAX"
 
-        # Build query với parameterized queries (prevent SQL injection)
         query = f"SELECT {agg_func}({column_to_check}) FROM {table_name}"
         params = []
 
@@ -146,7 +139,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                 if result and result[0] is not None:
                     latest_time = result[0]
 
-                    # Sử dụng ConvertDatetimeUtil để handle tất cả các type
                     from utils.convert_datetime_util import ConvertDatetimeUtil
 
                     try:
@@ -162,7 +154,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             # Kiểm tra nếu là lỗi connection closed
             error_str = str(e).lower()
             if "closed" in error_str or "terminate" in error_str:
-                # KHÔNG set self.connection = None - để database pool manager xử lý
                 self.logger.error(
                     f"Lỗi query PostgreSQL: {str(e)} - Connection có thể đã bị đóng bởi server"
                 )
@@ -170,7 +161,7 @@ class PostgreSQLConnector(BaseDatabaseConnector):
                 self.logger.error(f"Lỗi query PostgreSQL: {str(e)}")
             raise
 
-    def close(self) -> None:
+    def close(self):
         """
         Đóng PostgreSQL connection
         """
@@ -183,25 +174,14 @@ class PostgreSQLConnector(BaseDatabaseConnector):
         finally:
             self.connection = None
 
-    def get_required_package(self) -> str:
+    def get_distinct_symbols(self, table_name, symbol_column):
         """
-        Trả về package name cần cài đặt
-
-        Returns:
-            "psycopg2-binary"
-        """
-        return "psycopg2-binary"
-
-    def get_distinct_symbols(self, table_name: str, symbol_column: str) -> list:
-        """
-        Lấy danh sách unique symbols từ table
-
         Args:
             table_name: Table name
             symbol_column: Column chứa symbol
 
         Returns:
-            Sorted list of unique symbols
+            Sorted list các giá trị duy nhất của symbol
         """
         if not self.is_connected():
             raise ConnectionError(
@@ -220,7 +200,6 @@ class PostgreSQLConnector(BaseDatabaseConnector):
             # Kiểm tra nếu là lỗi connection closed
             error_str = str(e).lower()
             if "closed" in error_str or "terminate" in error_str:
-                # KHÔNG set self.connection = None - để database pool manager xử lý
                 self.logger.error(
                     f"Lỗi lấy DISTINCT symbols từ PostgreSQL: {str(e)} - Connection có thể đã bị đóng bởi server"
                 )

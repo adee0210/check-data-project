@@ -55,7 +55,6 @@ class CheckAPI:
 
         while True:
             # Reload config mỗi lần loop để nhận config mới
-            # (LoadConfigUtil có cache, chỉ reload khi file thay đổi)
             all_config = self._load_config()
             api_config = all_config.get(api_name, api_config)
 
@@ -74,6 +73,7 @@ class CheckAPI:
             allow_delay = check_cfg.get("allow_delay", 60)
             alert_frequency = check_cfg.get("alert_frequency", 60)
             check_frequency = check_cfg.get("check_frequency", 10)
+            max_check = check_cfg.get("max_check", 10)
 
             valid_schedule = schedule_cfg
 
@@ -358,6 +358,8 @@ class CheckAPI:
             if is_fresh:
                 # Reset tracking
                 self.tracker.reset_fresh_data(display_name)
+                # Reset holiday tracking khi data trở lại bình thường
+                self.tracker.reset_holiday_tracking(display_name)
 
                 self.logger_api.info(f"Kiểm tra API {display_name} - Có dữ liệu mới")
                 await asyncio.sleep(check_frequency)
@@ -384,7 +386,33 @@ class CheckAPI:
             )
 
             if should_send_alert:
+                # ===== HOLIDAY DETECTION LOGIC =====
+                # Track số lần gửi alert khi thực sự gửi alert
+                alert_count, current_alert_frequency, exceeded_max = (
+                    self.tracker.track_alert_count(
+                        display_name,
+                        max_check=max_check,
+                        initial_alert_frequency=alert_frequency,
+                        max_alert_frequency=1800,  # 30 phút
+                    )
+                )
+
+                # Cập nhật alert_frequency dựa trên holiday tracking
+                alert_frequency = current_alert_frequency
+
+                # Log thêm thông tin nếu vượt max_check
+                if alert_count > max_check:
+                    holiday_info = f" (Lần gửi alert thứ {alert_count}/{max_check}, nghi ngờ là ngày lễ)"
+                    self.logger_api.warning(warning_message + holiday_info)
+
                 source_info = {"type": "API", "url": uri}
+
+                # Tạo alert message (không sử dụng newline vì có thể gây lỗi JSON)
+                alert_message = f"Dữ liệu API quá hạn {time_str} cho {display_name}"
+                if alert_count > max_check:
+                    alert_message += f" | Cảnh báo: Lần gửi alert thứ {alert_count}/{max_check} - Nghi ngờ là ngày lễ"
+                    alert_message += f" | Alert frequency tăng lên: {alert_frequency} giây (tối đa 1800 giây)"
+
                 self.platform_util.send_alert(
                     api_name=api_name,
                     symbol=symbol,
@@ -393,7 +421,7 @@ class CheckAPI:
                     check_frequency=check_frequency,
                     alert_frequency=alert_frequency,
                     alert_level="warning",
-                    error_message=f"Dữ liệu API quá hạn {time_str} cho {display_name}",
+                    error_message=alert_message,
                     source_info=source_info,
                 )
                 self.tracker.record_alert_sent(display_name)
@@ -440,7 +468,6 @@ class CheckAPI:
 
             # Start task mới - resolve symbols mỗi lần
             for api_name, api_config in config_api.items():
-                # Resolve symbols mỗi lần để luôn lấy từ database
                 symbols = SymbolResolverUtil.resolve_api_symbols(api_name, api_config)
 
                 if symbols is None:

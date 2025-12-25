@@ -290,7 +290,7 @@ Lớp database:
   - `platform_manager.py`: `PlatformManager` tạo notifier từ `configs/common_config.json` và expose `send_alert()` gửi tới tất cả platform primary.
 
 - Database connectors (`configs/database_config/`)
-  - `base_db.py`: `BaseDatabaseConnector` interface (connect, query, close, get_required_package)
+  - `base_db.py`: `BaseDatabaseConnector` interface (connect, query, close)
   - `mongo_config.py`: `MongoDBConnector` dùng `pymongo` (connect, query, get_distinct_symbols)
   - `postgres_config.py`: `PostgreSQLConnector` dùng `psycopg2` (connect, query với MAX/MIN, get_distinct_symbols)
   - `database_manager.py`: `DatabaseManager` (factory, cache connectors, merge credential từ `common_config.json`).

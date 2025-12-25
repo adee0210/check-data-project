@@ -12,7 +12,7 @@ class DiscordNotifier(BasePlatformNotifier):
     Sử dụng Discord webhook để gửi rich embed messages
     """
 
-    def validate_config(self) -> None:
+    def validate_config(self):
         """
         Validate Discord config
 
@@ -27,7 +27,7 @@ class DiscordNotifier(BasePlatformNotifier):
         if not webhook_url.startswith("https://discord.com/api/webhooks/"):
             raise ValueError("Discord webhook URL không hợp lệ")
 
-    def get_platform_name(self) -> str:
+    def get_platform_name(self):
         """
         Trả về tên platform
 
@@ -49,7 +49,7 @@ class DiscordNotifier(BasePlatformNotifier):
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
         status_message: Optional[str] = None,
-    ) -> bool:
+    ):
         """
         Gửi alert đến Discord qua webhook
 
@@ -102,7 +102,7 @@ class DiscordNotifier(BasePlatformNotifier):
             self.logger.error(f"Lỗi gửi đến Discord: {str(e)}")
             return False
 
-    def _format_discord_embed(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_discord_embed(self, data):
         """
         Format message thành Discord embed
 
@@ -112,7 +112,6 @@ class DiscordNotifier(BasePlatformNotifier):
         Returns:
             Discord embed dict
         """
-        # Build description với Nội dung + Dữ liệu cũ ở đầu
         description_parts = [
             f"**Nội dung:** {data['error_message']}",
             f"**Thời gian:** {data['current_time']}",
@@ -151,7 +150,7 @@ class DiscordNotifier(BasePlatformNotifier):
 
         return embed
 
-    def send_holiday_alert(self, message: str) -> bool:
+    def send_holiday_alert(self, message):
         """
         Gửi alert đặc biệt cho holiday detection
 
@@ -161,8 +160,7 @@ class DiscordNotifier(BasePlatformNotifier):
         Returns:
             True nếu gửi thành công
         """
-        # Holiday alerts disabled — method retained for compatibility
         self.logger.debug(
-            "Holiday alert disabled in Discord notifier; ignoring request"
+            "Cảnh báo ngày lễ đã bị tắt trong thông báo Discord; đang bỏ qua yêu cầu"
         )
         return False

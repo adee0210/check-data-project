@@ -15,7 +15,7 @@ class BasePlatformNotifier(ABC):
     - format_message(): Format message theo platform
     """
 
-    def __init__(self, config: Dict[str, Any], logger):
+    def __init__(self, config, logger):
         """
         Initialize base notifier
 
@@ -30,18 +30,18 @@ class BasePlatformNotifier(ABC):
     @abstractmethod
     def send_alert(
         self,
-        api_name: str,
-        symbol: Optional[str],
-        overdue_seconds: int,
-        allow_delay: int,
-        check_frequency: int,
-        alert_frequency: int,
-        alert_level: str = "warning",
-        error_message: str = "Không có dữ liệu mới",
+        api_name,
+        symbol,
+        overdue_seconds,
+        allow_delay,
+        check_frequency,
+        alert_frequency,
+        alert_level="warning",
+        error_message="Không có dữ liệu mới",
         error_type: Optional[str] = None,
         source_info: Optional[Dict[str, Any]] = None,
         status_message: Optional[str] = None,
-    ) -> bool:
+    ):
         """
         Gửi alert message
 
@@ -71,7 +71,7 @@ class BasePlatformNotifier(ABC):
         pass
 
     @abstractmethod
-    def validate_config(self) -> None:
+    def validate_config(self):
         """
         Validate platform config
 
@@ -81,7 +81,7 @@ class BasePlatformNotifier(ABC):
         pass
 
     @abstractmethod
-    def get_platform_name(self) -> str:
+    def get_platform_name(self):
         """
         Trả về tên platform
 
@@ -90,7 +90,7 @@ class BasePlatformNotifier(ABC):
         """
         pass
 
-    def format_time(self, seconds: int) -> str:
+    def format_time(self, seconds: int):
         """
         Format seconds thành "X giờ Y phút Z giây"
 
@@ -105,7 +105,7 @@ class BasePlatformNotifier(ABC):
         secs = seconds % 60
         return f"{hours} giờ {minutes} phút {secs} giây"
 
-    def get_alert_emoji_and_color(self, alert_level: str) -> tuple:
+    def get_alert_emoji_and_color(self, alert_level):
         """
         Get emoji và color code theo alert level
 
@@ -135,13 +135,7 @@ class BasePlatformNotifier(ABC):
         error_type: Optional[str],
         source_info: Optional[Dict[str, Any]] = None,
         status_message: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Build common message data cho tất cả platforms
-
-        Returns:
-            Dict chứa formatted data
-        """
+    ):
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         next_time = datetime.now()
         from datetime import timedelta
@@ -161,7 +155,6 @@ class BasePlatformNotifier(ABC):
             else (error_type if error_type else "")
         )
 
-        # Build source details string
         source_details = ""
         if source_info:
             if source_type == "API" and "url" in source_info:
@@ -213,7 +206,7 @@ class BasePlatformNotifier(ABC):
             "status_message": status_message,
         }
 
-    def is_enabled(self) -> bool:
+    def is_enabled(self):
         """
         Check xem platform có được enable không
 
