@@ -80,6 +80,59 @@ class CheckAPI:
             if symbol:
                 uri = uri.format(symbol=symbol)
 
+            # Kiểm tra holidays: nếu là ngày lễ thì gửi alert 1 lần và không gửi alert stale nữa
+            holidays = valid_schedule.get("holidays") if valid_schedule else None
+            is_holiday = False
+            if holidays:
+                current_date = datetime.now().date()
+                for holiday_str in holidays:
+                    try:
+                        if " " in holiday_str:
+                            holiday_date = datetime.strptime(
+                                holiday_str, "%Y-%m-%d %H:%M:%S"
+                            ).date()
+                        else:
+                            holiday_date = datetime.strptime(
+                                holiday_str, "%Y-%m-%d"
+                            ).date()
+
+                        if current_date == holiday_date:
+                            is_holiday = True
+                            break
+                    except ValueError:
+                        continue
+
+            if is_holiday:
+                # Gửi alert 1 lần duy nhất khi là ngày lễ
+                if not getattr(self.tracker, "holiday_alert_sent", {}).get(
+                    display_name, False
+                ):
+                    # Gửi alert báo ngày lễ
+                    source_info = {"type": "API", "url": uri}
+                    alert_message = f"Hôm nay là ngày lễ, hệ thống sẽ không gửi alert về dữ liệu quá hạn"
+
+                    self.platform_util.send_alert(
+                        api_name=api_name,
+                        symbol=symbol,
+                        overdue_seconds=0,
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="info",
+                        error_message=alert_message,
+                        source_info=source_info,
+                    )
+
+                    if not hasattr(self.tracker, "holiday_alert_sent"):
+                        self.tracker.holiday_alert_sent = {}
+                    self.tracker.holiday_alert_sent[display_name] = True
+
+                    self.logger_api.info(
+                        f"Đã gửi alert thông báo ngày lễ cho {display_name}"
+                    )
+
+                # Vẫn check nhưng không gửi alert stale - tiếp tục xuống dưới
+
             # Kiểm tra valid_schedule: chỉ check trong khoảng thời gian và ngày được phép
             is_within_schedule = TimeValidator.is_within_valid_schedule(
                 valid_schedule, timezone_offset
@@ -102,6 +155,15 @@ class CheckAPI:
                         f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
                     )
                     self.tracker.outside_schedule_logged[display_name] = False
+
+            # Reset holiday flag chỉ khi không phải ngày lễ
+            if not is_holiday and getattr(self.tracker, "holiday_logged", {}).get(
+                display_name, False
+            ):
+                self.logger_api.info(
+                    f"Không phải ngày lễ, tiếp tục kiểm tra {display_name}"
+                )
+                self.tracker.holiday_logged[display_name] = False
 
             try:
                 r = requests.get(url=uri, timeout=10)
@@ -379,24 +441,26 @@ class CheckAPI:
             warning_message = f"CẢNH BÁO: Dữ liệu quá hạn {time_str} cho {display_name}"
             self.logger_api.warning(warning_message)
 
-            should_send_alert = self.tracker.should_send_alert(
-                display_name, alert_frequency
-            )
-
-            if should_send_alert:
-                source_info = {"type": "API", "url": uri}
-                self.platform_util.send_alert(
-                    api_name=api_name,
-                    symbol=symbol,
-                    overdue_seconds=overdue_seconds,
-                    allow_delay=allow_delay,
-                    check_frequency=check_frequency,
-                    alert_frequency=alert_frequency,
-                    alert_level="warning",
-                    error_message=f"Dữ liệu API quá hạn {time_str} cho {display_name}",
-                    source_info=source_info,
+            # Không gửi alert nếu là ngày lễ
+            if not is_holiday:
+                should_send_alert = self.tracker.should_send_alert(
+                    display_name, alert_frequency
                 )
-                self.tracker.record_alert_sent(display_name)
+
+                if should_send_alert:
+                    source_info = {"type": "API", "url": uri}
+                    self.platform_util.send_alert(
+                        api_name=api_name,
+                        symbol=symbol,
+                        overdue_seconds=overdue_seconds,
+                        allow_delay=allow_delay,
+                        check_frequency=check_frequency,
+                        alert_frequency=alert_frequency,
+                        alert_level="warning",
+                        error_message=f"Dữ liệu API quá hạn {time_str} cho {display_name}",
+                        source_info=source_info,
+                    )
+                    self.tracker.record_alert_sent(display_name)
 
             # Sleep theo check_frequency
             await asyncio.sleep(check_frequency)

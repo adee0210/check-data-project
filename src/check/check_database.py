@@ -105,6 +105,59 @@ class CheckDatabase:
 
                 valid_schedule = schedule_cfg
 
+                # Kiểm tra holidays trước: nếu là ngày lễ thì log riêng và bỏ qua
+                holidays = valid_schedule.get("holidays") if valid_schedule else None
+                is_holiday = False
+                if holidays:
+                    current_date = datetime.now().date()
+                    for holiday_str in holidays:
+                        try:
+                            if " " in holiday_str:
+                                holiday_date = datetime.strptime(
+                                    holiday_str, "%Y-%m-%d %H:%M:%S"
+                                ).date()
+                            else:
+                                holiday_date = datetime.strptime(
+                                    holiday_str, "%Y-%m-%d"
+                                ).date()
+
+                            if current_date == holiday_date:
+                                is_holiday = True
+                                break
+                        except ValueError:
+                            continue
+
+                if is_holiday:
+                    # Gửi alert 1 lần duy nhất khi là ngày lễ
+                    if not getattr(self.tracker, "holiday_alert_sent", {}).get(
+                        display_name, False
+                    ):
+                        # Gửi alert báo ngày lễ
+                        source_info = {"type": "DATABASE", "db_name": db_name}
+                        alert_message = f"Hôm nay là ngày lễ, hệ thống sẽ không gửi alert về dữ liệu quá hạn"
+
+                        self.platform_util.send_alert(
+                            api_name=display_name,
+                            symbol=symbol,
+                            overdue_seconds=0,
+                            allow_delay=allow_delay,
+                            check_frequency=check_frequency,
+                            alert_frequency=alert_frequency,
+                            alert_level="info",
+                            error_message=alert_message,
+                            source_info=source_info,
+                        )
+
+                        if not hasattr(self.tracker, "holiday_alert_sent"):
+                            self.tracker.holiday_alert_sent = {}
+                        self.tracker.holiday_alert_sent[display_name] = True
+
+                        self.logger_db.info(
+                            f"Đã gửi alert thông báo ngày lễ cho {display_name}"
+                        )
+
+                    # Vẫn check nhưng không gửi alert stale - tiếp tục xuống dưới
+
                 # Kiểm tra valid_schedule
                 is_within_schedule = TimeValidator.is_within_valid_schedule(
                     valid_schedule, timezone_offset
@@ -127,6 +180,15 @@ class CheckDatabase:
                             f"Trong lịch kiểm tra cho {display_name}, tiếp tục..."
                         )
                         self.outside_schedule_logged[display_name] = False
+
+                # Reset holiday flag chỉ khi không phải ngày lễ
+                if not is_holiday and getattr(self, "holiday_logged", {}).get(
+                    display_name, False
+                ):
+                    self.logger_db.info(
+                        f"Không phải ngày lễ, tiếp tục kiểm tra {display_name}"
+                    )
+                    self.holiday_logged[display_name] = False
 
                 # Thực hiện query database
                 try:
@@ -222,34 +284,36 @@ class CheckDatabase:
                 )
                 self.logger_db.warning(warning_message)
 
-                should_send_alert = self.tracker.should_send_alert(
-                    display_name, alert_frequency
-                )
-
-                if should_send_alert:
-                    db_cfg = db_config.get("database", {})
-                    source_info = {"type": "DATABASE"}
-                    if "type" in db_cfg:
-                        source_info["database_type"] = db_cfg["type"]
-                    if "database" in db_cfg:
-                        source_info["database"] = db_cfg["database"]
-                    if "collection_name" in db_cfg:
-                        source_info["collection"] = db_cfg["collection_name"]
-                    elif "table_name" in db_cfg:
-                        source_info["table"] = db_cfg["table_name"]
-
-                    self.platform_util.send_alert(
-                        api_name=db_name,
-                        symbol=symbol,
-                        overdue_seconds=overdue_seconds,
-                        allow_delay=allow_delay,
-                        check_frequency=check_frequency,
-                        alert_frequency=alert_frequency,
-                        alert_level="warning",
-                        error_message=f"Dữ liệu database quá hạn {time_str} cho {display_name}",
-                        source_info=source_info,
+                # Không gửi alert nếu là ngày lễ
+                if not is_holiday:
+                    should_send_alert = self.tracker.should_send_alert(
+                        display_name, alert_frequency
                     )
-                    self.tracker.record_alert_sent(display_name)
+
+                    if should_send_alert:
+                        db_cfg = db_config.get("database", {})
+                        source_info = {"type": "DATABASE"}
+                        if "type" in db_cfg:
+                            source_info["database_type"] = db_cfg["type"]
+                        if "database" in db_cfg:
+                            source_info["database"] = db_cfg["database"]
+                        if "collection_name" in db_cfg:
+                            source_info["collection"] = db_cfg["collection_name"]
+                        elif "table_name" in db_cfg:
+                            source_info["table"] = db_cfg["table_name"]
+
+                        self.platform_util.send_alert(
+                            api_name=db_name,
+                            symbol=symbol,
+                            overdue_seconds=overdue_seconds,
+                            allow_delay=allow_delay,
+                            check_frequency=check_frequency,
+                            alert_frequency=alert_frequency,
+                            alert_level="warning",
+                            error_message=f"Dữ liệu database quá hạn {time_str} cho {display_name}",
+                            source_info=source_info,
+                        )
+                        self.tracker.record_alert_sent(display_name)
 
                 # Sleep
                 await asyncio.sleep(check_frequency)

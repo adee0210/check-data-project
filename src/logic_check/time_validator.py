@@ -14,13 +14,33 @@ class TimeValidator:
         Kiểm tra một lịch trình đơn
 
         Args:
-            schedule: Dict với format {"valid_days": [...], "time_ranges": "..."} hoặc {"days": [...], "hours": "..."} (backward compatibility)
+            schedule: Dict với format {"valid_days": [...], "time_ranges": "...", "holidays": [...]} hoặc {"days": [...], "hours": "..."} (backward compatibility)
             current_weekday: Ngày hiện tại (0-6)
             current_time: Thời gian hiện tại
 
         Returns:
             True nếu hợp lệ, False nếu không
         """
+        # Kiểm tra holidays trước - nếu là ngày lễ thì vẫn cho phép check (chỉ log warning)
+        holidays = schedule.get("holidays")
+        if holidays:
+            current_date = datetime.now().date()
+            for holiday_str in holidays:
+                try:
+                    # Parse holiday date (format: "Y-m-d H:M:S" hoặc "Y-m-d")
+                    if " " in holiday_str:
+                        holiday_date = datetime.strptime(
+                            holiday_str, "%Y-%m-%d %H:%M:%S"
+                        ).date()
+                    else:
+                        holiday_date = datetime.strptime(holiday_str, "%Y-%m-%d").date()
+
+                    if current_date == holiday_date:
+                        # Là ngày lễ nhưng vẫn cho phép check (chỉ log warning ở checker)
+                        break
+                except ValueError:
+                    logger.warning(f"Invalid holiday format: {holiday_str}")
+
         # Support both new and old key names
         days = (
             schedule.get("valid_days")
@@ -98,9 +118,9 @@ class TimeValidator:
             valid_schedule: Có thể là:
                 1. None - Không giới hạn (24/7)
                 2. Dict đơn giản:
-                   {"valid_days": [0,1,2,3,4], "time_ranges": "08:00-17:00"}
-                   {"valid_days": [0,1,2,3,4], "time_ranges": ["08:00-11:30", "13:00-16:00"]}
-                   {"valid_days": None, "time_ranges": None}  # 24/7
+                   {"valid_days": [0,1,2,3,4], "time_ranges": "08:00-17:00", "holidays": ["2025-12-25", "2025-01-01"]}
+                   {"valid_days": [0,1,2,3,4], "time_ranges": ["08:00-11:30", "13:00-16:00"], "holidays": null}
+                   {"valid_days": None, "time_ranges": None, "holidays": null}  # 24/7
                 3. List nhiều schedules:
                    [
                        {"valid_days": [0,1,2,3,4], "time_ranges": None},
