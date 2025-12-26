@@ -470,7 +470,7 @@
         },
         "check": {
             "timezone_offset": 7,
-            "allow_delay": 180,
+            "allow_delay": 300,
             "check_frequency": 10,
             "alert_frequency": 300
         },
