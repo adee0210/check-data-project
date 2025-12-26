@@ -124,7 +124,7 @@
     "etf_candlestick": {
         "api": {
             "enable": true,
-            "url": "http://192.168.110.164:8010/crypto/etf-candlestick/?symbol={symbol}&day=0",
+            "url": "http://192.168.110.164:8010/etf-candlestick/?symbol={symbol}&day=0",
             "record_pointer": -1,
             "column_to_check": "datetime"
         },
@@ -315,7 +315,7 @@
     "vn100": {
         "api": {
             "enable": true,
-            "url": "http://192.168.110.164:8010/crypto/vn100/?day=0",
+            "url": "http://192.168.110.164:8010/vn100/?day=0",
             "record_pointer": 0,
             "column_to_check": "datetime"
         },
