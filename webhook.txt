@@ -2,3 +2,6 @@ https://discord.com/api/webhooks/1450020771450585121/vaAyEWssF72gRv1bemxufWP4dOL
 
 # test
 https://discord.com/api/webhooks/1444980293542088786/JhmtaTkgngBYnwbA827wBKfymjnUouliRU0Ktgy1BrsWfge0BEAJSj0kq8RQxr_O7y46
+
+# main log
+https://discord.com/api/webhooks/1454022238935318590/lzyZqtTr1UuOKSz6OIMf86Uy6F6-OgX4K8q_CqSRoCa875h4uWpmuUQpE6fN850z_ZyD
