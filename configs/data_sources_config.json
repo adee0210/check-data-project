@@ -90,7 +90,7 @@
     },
     "cmc": {
         "api": {
-            "enable": false,
+            "enable": true,
             "url": "http://192.168.110.164:8010/crypto/cmc/?symbol={symbol}&day=0",
             "record_pointer": 0,
             "column_to_check": "datetime"
