@@ -1,13 +1,13 @@
 {
     "funding-rate": {
         "api": {
-            "enable": true,
+            "enable": false,
             "url": "http://192.168.110.164:8010/crypto/funding_rate/?symbols={symbol}&day=0",
             "record_pointer": 0,
             "column_to_check": "datetime"
         },
         "database": {
-            "enable": true,
+            "enable": false,
             "type": "mongodb",
             "database": "funding_rate_db",
             "collection_name": "realtime",
@@ -60,7 +60,7 @@
         },
         "check": {
             "timezone_offset": 7,
-            "allow_delay": 120,
+            "allow_delay": 180,
             "check_frequency": 10,
             "alert_frequency": 300
         },
@@ -335,7 +335,7 @@
     },
     "tygia": {
         "database": {
-            "enable": true,
+            "enable": false,
             "type": "postgresql",
             "database": "dl_ckvn",
             "table": "selling_rate",
@@ -344,7 +344,7 @@
             "user_connect": "duc_le_connect"
         },
         "disk": {
-            "enable": true,
+            "enable": false,
             "file_type": "csv",
             "file_path": "/home/duc_le/nas/data/lsqd/tygia.csv",
             "record_pointer": 0,

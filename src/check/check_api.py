@@ -418,10 +418,18 @@ class CheckAPI:
             current_date = current_time.strftime("%Y-%m-%d")
 
             if is_fresh:
+                # Kiểm tra xem có thực sự là data mới không (timestamp thay đổi)
+                data_timestamp = dt_record_pointer_data_with_column_to_check.isoformat()
+                last_seen = self.tracker.last_seen_timestamps.get(display_name)
+
+                if last_seen is None or last_seen != data_timestamp:
+                    self.logger_api.info(
+                        f"Kiểm tra API {display_name} - Có dữ liệu mới"
+                    )
+                    self.tracker.last_seen_timestamps[display_name] = data_timestamp
+
                 # Reset tracking
                 self.tracker.reset_fresh_data(display_name)
-
-                self.logger_api.info(f"Kiểm tra API {display_name} - Có dữ liệu mới")
                 await asyncio.sleep(check_frequency)
                 continue
 

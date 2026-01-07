@@ -259,9 +259,16 @@ class CheckDatabase:
                 current_date = current_time.strftime("%Y-%m-%d")
 
                 if is_fresh:
-                    self.logger_db.info(
-                        f"Kiểm tra database {display_name} - Có dữ liệu mới"
-                    )
+                    # Kiểm tra xem có thực sự là data mới không (timestamp thay đổi)
+                    data_timestamp = dt_latest_time.isoformat()
+                    last_seen = self.last_seen_timestamps.get(display_name)
+
+                    if last_seen is None or last_seen != data_timestamp:
+                        self.logger_db.info(
+                            f"Kiểm tra database {display_name} - Có dữ liệu mới"
+                        )
+                        self.last_seen_timestamps[display_name] = data_timestamp
+
                     await asyncio.sleep(check_frequency)
                     continue
 
