@@ -1,5 +1,5 @@
 # test
-https://discord.com/api/webhooks/1455871206371758080/PpnTMRXdTdwT3N6rM3G0g9KmgdPhCjvBpOkg5DzC8VqHhj3sJmgSOE_nvvRTdAg3Ha1V
+https://discord.com/api/webhooks/1458672954408960062/CEWeOXEqSaEkPAefHqb_XIxZm2ll9QPrnBWW-fMdJ9hH4D5IkFEGxSIy7MoW4wUy_nd1
 
 # main log
 https://discord.com/api/webhooks/1454022238935318590/lzyZqtTr1UuOKSz6OIMf86Uy6F6-OgX4K8q_CqSRoCa875h4uWpmuUQpE6fN850z_ZyD

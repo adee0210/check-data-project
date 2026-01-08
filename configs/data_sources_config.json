@@ -27,8 +27,8 @@
         },
         "check": {
             "timezone_offset": 0,
-            "allow_delay": 86400,
-            "check_frequency": 10,
+            "allow_delay": 57600,
+            "check_frequency": 300,
             "alert_frequency": 300
         },
         "schedule": {
@@ -152,7 +152,7 @@
         "check": {
             "timezone_offset": 0,
             "allow_delay": 3600,
-            "check_frequency": 60,
+            "check_frequency": 180,
             "alert_frequency": 300
         },
         "schedule": {
@@ -225,7 +225,7 @@
         "check": {
             "timezone_offset": 7,
             "allow_delay": 60,
-            "check_frequency": 30,
+            "check_frequency": 10,
             "alert_frequency": 180
         },
         "schedule": {
@@ -311,7 +311,7 @@
         "check": {
             "timezone_offset": 7,
             "allow_delay": 86400,
-            "check_frequency": 10,
+            "check_frequency": 180,
             "alert_frequency": 300
         },
         "schedule": {
